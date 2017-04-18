@@ -1,0 +1,1 @@
+Contains all the templates available for post workflow processing. These templates are linked to different views using the template extensions in the swagger spec.

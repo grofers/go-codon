@@ -1,0 +1,8 @@
+endpoints:
+  # These services based on clients are available in flow dsl
+  # service_name:
+  #   scheme: http/https
+  #   host: localhost
+  #   client: client_library_name
+constants:
+  # any_key: "any_value"

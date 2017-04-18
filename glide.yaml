@@ -1,0 +1,9 @@
+package: github.com/grofers/go-codon
+import:
+- package: github.com/go-swagger/go-swagger
+  version: 0.9.0
+  subpackages:
+  - generator
+- package: github.com/spf13/cobra
+- package: github.com/spf13/viper
+- package: gopkg.in/yaml.v2

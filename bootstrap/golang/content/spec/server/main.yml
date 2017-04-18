@@ -1,0 +1,6 @@
+swagger: '2.0'
+info:
+  title: {{.ProjectName}} service
+  version: "0.0.1"
+# TODO: Finish writing the swagger spec for your REST service with
+#       workflow extensions.

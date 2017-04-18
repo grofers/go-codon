@@ -1,0 +1,138 @@
+hash: 7b1cbbcfe61af43ff4954df7a0d292e352e3d28dfb6e275cccba74a60db09e80
+updated: 2017-04-18T19:47:52.077882142+05:30
+imports:
+- name: github.com/asaskevich/govalidator
+  version: fdf19785fd3558d619ef81212f5edf1d6c2a5911
+  repo: https://github.com/asaskevich/govalidator
+- name: github.com/fsnotify/fsnotify
+  version: 4da3e2cfbabc9f751898f250b49f2439785783a1
+- name: github.com/go-openapi/analysis
+  version: d5a75b7d751ca3f11ad5d93cfe97405f2c3f6a47
+  repo: https://github.com/go-openapi/analysis
+- name: github.com/go-openapi/errors
+  version: fc3f73a224499b047eda7191e5d22e1e9631e86f
+  repo: https://github.com/go-openapi/errors
+- name: github.com/go-openapi/inflect
+  version: b1f6470ffb9c552dc105dd869f16e36ba86ba7d0
+  repo: https://github.com/go-openapi/inflect
+- name: github.com/go-openapi/jsonpointer
+  version: 779f45308c19820f1a69e9a4cd965f496e0da10f
+  repo: https://github.com/go-openapi/jsonpointer
+- name: github.com/go-openapi/jsonreference
+  version: 36d33bfe519efae5632669801b180bf1a245da3b
+  repo: https://github.com/go-openapi/jsonreference
+- name: github.com/go-openapi/loads
+  version: 6bb6486231e079ea125c0f39994ed3d0c53399ed
+  repo: https://github.com/go-openapi/loads
+  subpackages:
+  - fmts
+- name: github.com/go-openapi/runtime
+  version: e66a4c4406028a04ddafd6002c378ffd3db7e52b
+  repo: https://github.com/go-openapi/runtime
+- name: github.com/go-openapi/spec
+  version: 02fb9cd3430ed0581e0ceb4804d5d4b3cc702694
+  repo: https://github.com/go-openapi/spec
+- name: github.com/go-openapi/strfmt
+  version: bf5b18a89572c3ae2474b537f0c3d92bc78ababa
+  repo: https://github.com/go-openapi/strfmt
+- name: github.com/go-openapi/swag
+  version: d5f8ebc3b1c55a4cf6489eeae7354f338cfe299e
+  repo: https://github.com/go-openapi/swag
+- name: github.com/go-openapi/validate
+  version: 035dcd74f1f61e83debe1c22950dc53556e7e4b2
+  repo: https://github.com/go-openapi/validate
+- name: github.com/go-swagger/go-swagger
+  version: e341e616eaee0b6bd888b6ba6eb0872d093a23ed
+  subpackages:
+  - generator
+- name: github.com/hashicorp/hcl
+  version: 630949a3c5fa3c613328e1b8256052cbc2327c9b
+  subpackages:
+  - hcl/ast
+  - hcl/parser
+  - hcl/scanner
+  - hcl/strconv
+  - hcl/token
+  - json/parser
+  - json/scanner
+  - json/token
+- name: github.com/inconshreveable/mousetrap
+  version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
+- name: github.com/kr/pretty
+  version: cfb55aafdaf3ec08f0db22699ab822c50091b1c4
+  repo: https://github.com/kr/pretty
+- name: github.com/kr/text
+  version: 7cafcd837844e784b526369c9bce262804aebc60
+  repo: https://github.com/kr/text
+- name: github.com/magiconair/properties
+  version: 51463bfca2576e06c62a8504b5c0f06d61312647
+- name: github.com/mailru/easyjson
+  version: db58e6f9072c545a3a24b8d44c51d81fff6dcb51
+  repo: https://github.com/mailru/easyjson
+  subpackages:
+  - buffer
+  - jlexer
+  - jwriter
+- name: github.com/mitchellh/mapstructure
+  version: 53818660ed4955e899c0bcafa97299a388bd7c8e
+- name: github.com/pelletier/go-buffruneio
+  version: c37440a7cf42ac63b919c752ca73a85067e05992
+  repo: https://github.com/pelletier/go-buffruneio
+- name: github.com/pelletier/go-toml
+  version: fe206efb84b2bc8e8cfafe6b4c1826622be969e3
+- name: github.com/PuerkitoBio/purell
+  version: 0bcb03f4b4d0a9428594752bd2a3b9aa0a9d4bd4
+  repo: https://github.com/PuerkitoBio/purell
+- name: github.com/PuerkitoBio/urlesc
+  version: 5bd2802263f21d8788851d5305584c82a5c75d7e
+  repo: https://github.com/PuerkitoBio/urlesc
+- name: github.com/spf13/afero
+  version: 9be650865eab0c12963d8753212f4f9c66cdcf12
+  subpackages:
+  - mem
+- name: github.com/spf13/cast
+  version: acbeb36b902d72a7a4c18e8f3241075e7ab763e4
+- name: github.com/spf13/cobra
+  version: b6cb3958937245a12d4d7728be080a6c758f4136
+- name: github.com/spf13/jwalterweatherman
+  version: fa7ca7e836cf3a8bb4ebf799f472c12d7e903d66
+- name: github.com/spf13/pflag
+  version: 2300d0f8576fe575f71aaa5b9bbe4e1b0dc2eb51
+- name: github.com/spf13/viper
+  version: 0967fc9aceab2ce9da34061253ac10fb99bba5b2
+- name: golang.org/x/net
+  version: a6577fac2d73be281a500b310739095313165611
+  repo: https://go.googlesource.com/net
+  subpackages:
+  - context
+  - idna
+  - netutil
+- name: golang.org/x/sys
+  version: 99f16d856c9836c42d24e7ab64ea72916925fa97
+  repo: https://go.googlesource.com/sys
+  subpackages:
+  - unix
+- name: golang.org/x/text
+  version: f28f36722d5ef2f9655ad3de1f248e3e52ad5ebd
+  repo: https://go.googlesource.com/text
+  subpackages:
+  - transform
+  - unicode/norm
+  - width
+- name: golang.org/x/tools
+  version: f60b69ed8cd7a29e91f87050ae23a29581a0f367
+  repo: https://go.googlesource.com/tools
+  subpackages:
+  - go/ast/astutil
+  - go/buildutil
+  - go/loader
+  - imports
+- name: gopkg.in/mgo.v2
+  version: 3f83fa5005286a7fe593b055f0d7771a7dce4655
+  repo: https://gopkg.in/mgo.v2
+  subpackages:
+  - bson
+  - internal/json
+- name: gopkg.in/yaml.v2
+  version: a3f3340b5840cee44f372bddb5880fcbc419b46a
+testImports: []
