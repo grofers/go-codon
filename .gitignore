@@ -24,4 +24,5 @@ _testmain.go
 *.prof
 
 bootstrap/golang/bindata.go
+generator/golang/bindata.go
 vendor/

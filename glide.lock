@@ -1,5 +1,5 @@
-hash: 7b1cbbcfe61af43ff4954df7a0d292e352e3d28dfb6e275cccba74a60db09e80
-updated: 2017-04-18T19:47:52.077882142+05:30
+hash: dd5d948c9f908c6147e575bf6544a274690e8f1155b69ea525bf688ace7794d9
+updated: 2017-04-19T22:46:00.394464558+05:30
 imports:
 - name: github.com/asaskevich/govalidator
   version: fdf19785fd3558d619ef81212f5edf1d6c2a5911
@@ -37,7 +37,6 @@ imports:
   repo: https://github.com/go-openapi/strfmt
 - name: github.com/go-openapi/swag
   version: d5f8ebc3b1c55a4cf6489eeae7354f338cfe299e
-  repo: https://github.com/go-openapi/swag
 - name: github.com/go-openapi/validate
   version: 035dcd74f1f61e83debe1c22950dc53556e7e4b2
   repo: https://github.com/go-openapi/validate
@@ -68,7 +67,6 @@ imports:
   version: 51463bfca2576e06c62a8504b5c0f06d61312647
 - name: github.com/mailru/easyjson
   version: db58e6f9072c545a3a24b8d44c51d81fff6dcb51
-  repo: https://github.com/mailru/easyjson
   subpackages:
   - buffer
   - jlexer
@@ -133,6 +131,11 @@ imports:
   subpackages:
   - bson
   - internal/json
+  - internal/sasl
+  - internal/scram
+- name: gopkg.in/mgo.v2/bson
+  version: 3f83fa5005286a7fe593b055f0d7771a7dce4655
+  repo: https://gopkg.in/mgo.v2
 - name: gopkg.in/yaml.v2
   version: a3f3340b5840cee44f372bddb5880fcbc419b46a
 testImports: []

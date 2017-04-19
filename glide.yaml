@@ -1,5 +1,6 @@
 package: github.com/grofers/go-codon
 import:
+- package: github.com/go-openapi/swag
 - package: github.com/go-swagger/go-swagger
   version: 0.9.0
   subpackages:

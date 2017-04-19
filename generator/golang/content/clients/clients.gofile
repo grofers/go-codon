@@ -1,0 +1,10 @@
+package clients
+
+import (
+	{{if .ClientEndpoints}}config "github.com/grofers/go-codon/runtime/config"{{end}}
+	{{ range $client, $used := .ClientsUsed }}
+	{{if $used}}{{$client}}_client "{{ index $.ClientImports $client }}"{{end}}{{end}}
+)
+
+{{ range $key, $value := .ClientEndpoints }}
+var {{ index $.ClientEndpointGoNames $key }} = {{$value.client}}_client.NewHTTPClientWithConfigMap(nil, config.GetEndpoint("{{$key}}")).Operations{{ end }}
