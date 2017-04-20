@@ -47,9 +47,9 @@ func (bs *bootstrapper) process_templates() error {
 
 		var new_asset_path string
 		if strings.HasSuffix(asset, ".gofile") {
-			new_asset_path = filepath.Join(gen.CurrentDirPath, strings.TrimSuffix(asset, ".gofile") + ".go")
+			new_asset_path = filepath.Join(bs.CurrentDirPath, strings.TrimSuffix(asset, ".gofile") + ".go")
 		} else {
-			new_asset_path = filepath.Join(gen.CurrentDirPath, asset)
+			new_asset_path = filepath.Join(bs.CurrentDirPath, asset)
 		}
 		base_path, _ := filepath.Split(new_asset_path)
 
