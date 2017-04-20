@@ -97,6 +97,16 @@ func GenerateServiceSwagger(gen *generator) bool {
 		log.Println(err)
 		return false
 	}
+
+	// TODO: Add support for template config
+	// Adding views template to configuration
+	opts.Sections.Application = append(opts.Sections.Application, swagger_generator.TemplateOpts{
+		Name:       "views",
+		Source:     "asset:serverViews",
+		Target:     "{{ joinFilePath .Target .ServerPackage }}",
+		FileName:   "views.go",
+	})
+
 	if err := swagger_generator.GenerateServer("", []string{}, []string{}, opts); err != nil {
 		log.Println(err)
 		return false
