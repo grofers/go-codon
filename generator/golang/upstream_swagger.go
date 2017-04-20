@@ -58,6 +58,53 @@ func GenerateUpstreamSwagger(gen *generator) bool {
 	return true
 }
 
+func GenerateServiceSwagger(gen *generator) bool {
+	// swagger generate server -f spec/server/main.yml -t server -T spec/templates/
+	gen.CurrentDirTarget = "server"
+	gen.CurrentSpecFilePath = "spec/server/main.yml"
+
+	opts := &swagger_generator.GenOpts{
+		IncludeModel:      true,
+		IncludeValidator:  true,
+		IncludeHandler:    true,
+		IncludeParameters: true,
+		IncludeResponses:  true,
+		IncludeURLBuilder: true,
+		IncludeMain:       true,
+		IncludeSupport:    true,
+		ExcludeSpec:       false,
+		DumpData:          false,
+		WithContext:       false,
+		ValidateSpec:      true,
+		Spec:              gen.CurrentSpecFilePath,
+		APIPackage:        "operations",
+		ModelPackage:      "models",
+		ServerPackage:     "restapi",
+		ClientPackage:     "client",
+		Principal:         "",
+		Target:            gen.CurrentDirTarget,
+		DefaultScheme:     "http",
+		DefaultProduces:   "",
+		Tags:              []string{},
+		TemplateDir:       "spec/templates/",
+		Models:            []string{},
+		Operations:        []string{},
+		Name:              "",
+		FlagStrategy:      "go-flags",
+		CompatibilityMode: "modern",
+	}
+	if err := opts.EnsureDefaults(false); err != nil {
+		log.Println(err)
+		return false
+	}
+	if err := swagger_generator.GenerateServer("", []string{}, []string{}, opts); err != nil {
+		log.Println(err)
+		return false
+	}
+
+	return true
+}
+
 // Copyright 2015 go-swagger maintainers
 // Use of this source code is governed by Apache License,
 // Version 2.0 that can be found in the LICENSE file.

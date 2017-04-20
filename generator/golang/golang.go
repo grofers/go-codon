@@ -36,6 +36,11 @@ var upstream_generator_list = map[int]func(*generator)bool {
 	codon_shared.UNKNOWN: GenerateUnknown,
 }
 
+var service_generator_list = map[int]func(*generator)bool {
+	codon_shared.SWAGGER: GenerateServiceSwagger,
+	codon_shared.UNKNOWN: GenerateUnknown,
+}
+
 func (gen *generator) Init() {
 	gen.ClientImports = make(map[string]string)
 	gen.ClientEndpoints = make(map[string]map[string]string)
@@ -160,6 +165,16 @@ func (gen *generator) GenerateContent() bool {
 	return true
 }
 
+func (gen *generator) GenerateService() bool {
+	spec_type := codon_shared.DetectFileSpec("spec/server/main.yml")
+	gen_func := service_generator_list[spec_type]
+	if ok := gen_func(gen); !ok {
+		log.Println("Failed to generate code for spec/server/main.yml")
+		return false
+	}
+	return true
+}
+
 func (gen *generator) Generate() bool {
 	gen.Init()
 	log.Println("Generating a codon project in golang ...")
@@ -173,6 +188,10 @@ func (gen *generator) Generate() bool {
 	}
 
 	if !gen.GenerateContent() {
+		return false
+	}
+
+	if !gen.GenerateService() {
 		return false
 	}
 
