@@ -2,7 +2,7 @@ package: github.com/grofers/go-codon
 import:
 - package: github.com/go-openapi/swag
 - package: github.com/go-swagger/go-swagger
-  version: 0.9.0
+  repo: git@github.com:grofers/go-swagger.git
   subpackages:
   - generator
 - package: github.com/spf13/cobra
