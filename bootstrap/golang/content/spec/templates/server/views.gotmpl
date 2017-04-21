@@ -20,36 +20,9 @@ func configureViews(api *{{.Package}}.{{ pascalize .Name }}API) {
     log.Println("[INFO] Request received for {{if ne .Package $package}}{{ .Package}}{{end}}.{{pascalize .Name}}, params: ", var_map)
     if err != nil {
       log.Println("[WARN] Failed to parse params for request. Error: ", err)
-      {{ $failfound := false }}
-      {{ $failresponse := .SuccessResponse }}
-      {{ range .Responses }}
-      {{ if eq .Code 400 }}
-      {{ $failfound := true }}
-      {{ $failresponse := . }}
-      return &operations.{{ pascalize .Name }}{
-      }
-      {{ end }}
-      {{ end }}
-      {{ if not $failfound }}
-      {{ range .Responses }}
-      {{ if and (ge .Code 400) (lt .Code 500) }}
-      {{ $failfound := true }}
-      {{ $failresponse := . }}
-      return &operations.{{ pascalize .Name }}{
-      }
-      {{ end }}
-      {{ end }}
-      {{ end }}
-      {{ if not $failfound }}
-      {{ range .Responses }}
-      {{ if and (ge .Code 200) (lt .Code 300) }}
-      {{ $failfound := true }}
-      {{ $failresponse := . }}
-      return &operations.{{ pascalize .Name }}{
-      }
-      {{ end }}
-      {{ end }}
-      {{ end }}
+      {{ if .FailResponse }}return &operations.{{ pascalize .FailResponse.Name }}{
+      }{{ else }}return &operations.{{ pascalize .SuccessResponse.Name }}{
+      }{{ end }}
     }
 
     resp := workflows.{{ pascalize $workflow }}(&var_map).(map[string]interface{})
@@ -57,14 +30,14 @@ func configureViews(api *{{.Package}}.{{ pascalize .Name }}API) {
     status_code, _ := resp["status_code"].(int64)
 
     switch status_code {
-    {{ range .Responses }}
-    case {{.Code}}:
+    {{ range .Responses }}case {{.Code}}:
       return &operations.{{ pascalize .Name }}{
         Payload: resp["body"],
       }{{ end }}
     default:
-      return &operations.{{ pascalize $failresponse.Name }}{
-      }
+      {{ if .FailResponse }}return &operations.{{ pascalize .FailResponse.Name }}{
+      }{{ else }}return &operations.{{ pascalize .SuccessResponse.Name }}{
+      }{{ end }}
     }
     {{ else }}
     return middleware.NotImplemented("operation {{if ne .Package $package}}{{ .Package}}{{end}}.{{pascalize .Name}} has not yet been implemented")
