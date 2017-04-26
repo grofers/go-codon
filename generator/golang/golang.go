@@ -2,6 +2,7 @@ package golang
 
 import (
 	"os"
+	"os/exec"
 	"log"
 	"strings"
 	"io/ioutil"
@@ -127,6 +128,16 @@ func GenerateUnknown(gen *generator) bool {
 	return true
 }
 
+func (gen *generator) GenerateDynamic() bool {
+	err := exec.Command("go", "generate").Run()
+	if err != nil {
+		log.Println("Could not run `go generate` command. Bindata not generated.")
+		log.Fatalln("Please run it yourself and then run `codon generate --no-bindata`")
+		return false
+	}
+	return true
+}
+
 func (gen *generator) GenerateUpstream() bool {
 	// Get list of all the files in spec/clients
 	files, err := ioutil.ReadDir("spec/clients")
@@ -180,6 +191,10 @@ func (gen *generator) Generate() bool {
 	log.Println("Generating a codon project in golang ...")
 
 	if err := gen.UpdateCurrentDirPath(); err != nil {
+		return false
+	}
+
+	if !gen.GenerateDynamic() {
 		return false
 	}
 
