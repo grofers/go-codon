@@ -154,6 +154,9 @@ func ({{ .ReceiverName }} *{{ pascalize .Name }}) WriteResponse(rw http.Response
   }
   {{ end }}
   {{ if (index .Extensions "x-template") }}
+    context := map[string]interface{} {
+      "body": payload,
+    }
     if err := templates.Execute("{{(index .Extensions "x-template" "location")}}", context, rw); err != nil {
       panic(err)
     }
@@ -185,7 +188,7 @@ import (
   "github.com/grofers/go-codon/runtime/templates"
 )
 
-var _ = templates.Init(bindata.Asset)
+var _ = templates.Init(bintemplate.AssetNames, bintemplate.Asset)
 
 {{ range .Responses }}
 {{ template "serverresponse" . }}
