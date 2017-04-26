@@ -153,9 +153,15 @@ func ({{ .ReceiverName }} *{{ pascalize .Name }}) WriteResponse(rw http.Response
     payload = {{ .Schema.Zero }}
   }
   {{ end }}
+  {{ if (index .Extensions "x-template") }}
+    if err := templates.Execute("{{(index .Extensions "x-template" "location")}}", context, rw); err != nil {
+      panic(err)
+    }
+  {{ else }}
     if err := producer.Produce(rw, payload); err != nil {
       panic(err) // let the recovery middleware deal with this
     }
+  {{ end }}
   {{ if .Schema.IsComplexObject }} } {{ end }}{{ end }}
 }
 {{ end }}package {{ .Package }}
@@ -176,7 +182,10 @@ import (
   {{ end }}
   {{ range $key, $value := .Imports }}{{ $key }} {{ printf "%q" $value }}
   {{ end }}
+  "github.com/grofers/go-codon/runtime/templates"
 )
+
+var _ = templates.Init(bindata.Asset)
 
 {{ range .Responses }}
 {{ template "serverresponse" . }}
