@@ -13,6 +13,8 @@ import (
 
 	codon_shared "github.com/grofers/go-codon/shared"
 	config "github.com/grofers/go-codon/runtime/config"
+
+	flowgen "github.com/grofers/go-codon/flowgen/generator"
 )
 
 // Important: Dont use lists, use maps
@@ -30,6 +32,7 @@ type generator struct {
 	ClientEndpoints map[string]map[string]string
 	ClientsUsed map[string]bool
 	ClientEndpointGoNames map[string]string
+	WorkflowsBasePath string
 }
 
 var upstream_generator_list = map[int]func(*generator)bool {
@@ -186,6 +189,59 @@ func (gen *generator) GenerateService() bool {
 	return true
 }
 
+func (gen *generator) generateWorkflows(prefix string, dest string) bool {
+	files, err := ioutil.ReadDir(prefix)
+	if err != nil {
+		log.Println(err)
+		return false
+	}
+
+	for _, file := range files {
+		if file.IsDir() {
+			new_prefix := filepath.Join(prefix, file.Name())
+			gen.generateWorkflows(new_prefix, dest)
+			continue
+		}
+		gen.CurrentSpecFile = file.Name()
+		gen.CurrentSpecFilePath = filepath.Join(prefix, file.Name())
+		if !strings.HasSuffix(gen.CurrentSpecFile, ".yml") && !strings.HasSuffix(gen.CurrentSpecFile, ".yaml") {
+			continue
+		}
+		log.Println("Processing workflow spec: ", file.Name())
+		rel_path, err2 := filepath.Rel(gen.WorkflowsBasePath, gen.CurrentSpecFilePath)
+		if err2 != nil {
+			log.Println(err2)
+			return false
+		}
+		rel_path = filepath.Clean(rel_path)
+		filename := strings.Replace(rel_path, "/", "_", -1)
+		filename = strings.TrimSuffix(filename, ".yaml")
+		filename = strings.TrimSuffix(filename, ".yml")
+		filename = filename + ".go"
+
+		opts := &flowgen.GenOpts{
+			Spec: gen.CurrentSpecFilePath,
+			Dest: filepath.Join(dest, filename),
+			Templates: "spec/templates/workflow/",
+		}
+		err2 = flowgen.Process(opts)
+		if err2 != nil {
+			log.Println("Failed to generate workflow for", file.Name())
+			log.Println(err2)
+			return false
+		}
+	}
+	return true
+}
+
+func (gen *generator) GenerateWorkflow() bool {
+	gen.WorkflowsBasePath = "spec/server/workflows"
+	if !gen.generateWorkflows(gen.WorkflowsBasePath, "workflows") {
+		return false
+	}
+	return true
+}
+
 func (gen *generator) Generate() bool {
 	gen.Init()
 	log.Println("Generating a codon project in golang ...")
@@ -203,6 +259,10 @@ func (gen *generator) Generate() bool {
 	}
 
 	if !gen.GenerateContent() {
+		return false
+	}
+
+	if !gen.GenerateWorkflow() {
 		return false
 	}
 

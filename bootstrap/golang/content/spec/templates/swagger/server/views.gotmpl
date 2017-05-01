@@ -9,6 +9,8 @@ import (
   {{end}}
   {{range $key, $value := .Imports}}{{$key}} {{ printf "%q" $value}}
   {{end}}
+  {{range $key, $value := .GenOpts.Imports}}{{$key}} {{ printf "%q" $value}}
+  {{end}}
 )
 {{ $package := .Package }}
 

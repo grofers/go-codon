@@ -1,15 +1,13 @@
 package golang
 
 import (
-	"os"
 	"fmt"
 	"log"
-	"errors"
 	"strings"
 	"path/filepath"
-	goruntime "runtime"
 
 	swagger_generator "github.com/go-swagger/go-swagger/generator"
+	shared "github.com/grofers/go-codon/shared"
 )
 
 func GenerateUpstreamSwagger(gen *generator) bool {
@@ -37,7 +35,7 @@ func GenerateUpstreamSwagger(gen *generator) bool {
 		DumpData:          false,
 		Spec:              gen.CurrentSpecFilePath,
 		Target:            gen.CurrentDirTarget,
-		TemplateDir:       "spec/templates/",
+		TemplateDir:       "spec/templates/swagger/",
 	}
 	if err := opts.EnsureDefaults(true); err != nil {
 		log.Println(err)
@@ -48,7 +46,7 @@ func GenerateUpstreamSwagger(gen *generator) bool {
 		return false
 	}
 
-	import_path, err := baseImport(filepath.Join(gen.CurrentDirTarget, opts.ClientPackage))
+	import_path, err := shared.BaseImport(filepath.Join(gen.CurrentDirTarget, opts.ClientPackage))
 	if err != nil {
 		log.Println(err)
 		return false
@@ -59,7 +57,7 @@ func GenerateUpstreamSwagger(gen *generator) bool {
 }
 
 func GenerateServiceSwagger(gen *generator) bool {
-	// swagger generate server -f spec/server/main.yml -t server -T spec/templates/
+	// swagger generate server -f spec/server/main.yml -t server -T spec/templates/swagger/
 	gen.CurrentDirTarget = "server"
 	gen.CurrentSpecFilePath = "spec/server/main.yml"
 
@@ -86,7 +84,7 @@ func GenerateServiceSwagger(gen *generator) bool {
 		DefaultScheme:     "http",
 		DefaultProduces:   "",
 		Tags:              []string{},
-		TemplateDir:       "spec/templates/",
+		TemplateDir:       "spec/templates/swagger/",
 		Models:            []string{},
 		Operations:        []string{},
 		Name:              "",
@@ -107,43 +105,20 @@ func GenerateServiceSwagger(gen *generator) bool {
 		FileName:   "views.go",
 	})
 
+	if opts.Imports == nil {
+		opts.Imports = make(map[string]string)
+	}
+	workflow_import, err := shared.BaseImport("workflows")
+	if err != nil {
+		log.Println(err)
+		return false
+	}
+	opts.Imports["workflows"] = workflow_import
+
 	if err := swagger_generator.GenerateServer("", []string{}, []string{}, opts); err != nil {
 		log.Println(err)
 		return false
 	}
 
 	return true
-}
-
-// Copyright 2015 go-swagger maintainers
-// Use of this source code is governed by Apache License,
-// Version 2.0 that can be found in the LICENSE file.
-// Modified error reporting structure to match go-codon's
-func baseImport(tgt string) (string, error) {
-	p, err := filepath.Abs(tgt)
-	if err != nil {
-		return "", err
-	}
-
-	var pth string
-	for _, gp := range filepath.SplitList(os.Getenv("GOPATH")) {
-		pp := filepath.Join(filepath.Clean(gp), "src")
-		var np, npp string
-		if goruntime.GOOS == "windows" {
-			np = strings.ToLower(p)
-			npp = strings.ToLower(pp)
-		}
-		if strings.HasPrefix(np, npp) {
-			pth, err = filepath.Rel(pp, p)
-			if err != nil {
-				return "", err
-			}
-			break
-		}
-	}
-
-	if pth == "" {
-		return "", errors.New("target must reside inside a location in the $GOPATH/src")
-	}
-	return pth, nil
 }
