@@ -22,7 +22,7 @@ func {{ pascalize .OrigSpec.Name }}(var_map *map[string]interface{}) interface{}
 	err = nil
 
 	{{ if eq (len .OrigSpec.Start) 1 }}
-	{{printf "task_%s__%s" (index $.OrigSpec.Name $.OrigSpec.Start 0)}}(var_map)
+	{{printf "task_%s__%s" $.OrigSpec.Name (index $.OrigSpec.Start 0)}}(var_map)
 	{{ else if gt (len .OrigSpec.Start) 1 }}
 	var wg sync.WaitGroup
 	wg.Add({{len .OrigSpec.Start}})

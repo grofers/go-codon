@@ -17,6 +17,8 @@ import (
 
   strfmt "github.com/go-openapi/strfmt"
 
+  conv "github.com/cstockton/go-conv"
+
   {{ range .DefaultImports }}{{ printf "%q" .}}
   {{ end }}
   {{ range $key, $value := .Imports }}{{ $key }} {{ printf "%q" $value }}
@@ -89,7 +91,17 @@ func New{{ pascalize .Name }}ParamsFromMap(params *map[string]interface{}) *{{ p
       retParams.SetTimeout(time.Duration(v.(int64)) * time.Millisecond)
     {{ range .Params }}
     case {{ .Path }}:{{ if and (not .IsArray) (not .IsMap) (not .HasDiscriminator) (not .IsInterface) (not .IsStream) (or .IsNullable  ) }}
-      v_str := v.({{ if not .IsFileParam }}{{ .GoType }}{{ else }}os.File{{end}})
+      {{ if not .IsFileParam }}
+      {{ if eq .GoType "bool" }}
+      v_str, _ := conv.Bool(v)
+      {{ else if eq .GoType "int64" }}
+      v_str, _ := conv.Int64(v)
+      {{ else if eq .GoType "float64" }}
+      v_str, _ := conv.Float64(v)
+      {{ end }}
+      {{ else }}
+      v_str := v.(os.File)
+      {{ end }}
       retParams.{{ pascalize .ID }} = &v_str{{ else }}
       retParams.{{ pascalize .ID }} = v.({{ if not .IsFileParam }}{{ .GoType }}{{ else }}os.File{{end}}){{ end }}
     {{ end }}

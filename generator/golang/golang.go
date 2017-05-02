@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"text/template"
+	imports "golang.org/x/tools/imports"
 
 	"github.com/go-openapi/swag"
 
@@ -230,6 +231,12 @@ func (gen *generator) generateWorkflows(prefix string, dest string) bool {
 			log.Println(err2)
 			return false
 		}
+		err2 = formatFunc(opts.Dest)
+		if err2 != nil {
+			log.Println("Failed to format workflow file", file.Name())
+			log.Println(err2)
+			return false
+		}
 	}
 	return true
 }
@@ -274,3 +281,27 @@ func (gen *generator) Generate() bool {
 }
 
 var Generator = generator{}
+
+func formatFunc(filename string) error {
+	content, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+
+	opts := new(imports.Options)
+	opts.TabIndent = true
+	opts.TabWidth = 2
+	opts.Fragment = true
+	opts.Comments = true
+
+	new_content, err := imports.Process(filename, content, opts)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(filename, new_content, os.FileMode(0755))
+	if err != nil {
+		return err
+	}
+	return nil
+}

@@ -5,6 +5,8 @@ import (
 
   middleware "github.com/go-openapi/runtime/middleware"
 
+  conv "github.com/cstockton/go-conv"
+
   {{range .DefaultImports}}{{printf "%q" .}}
   {{end}}
   {{range $key, $value := .Imports}}{{$key}} {{ printf "%q" $value}}
@@ -29,7 +31,7 @@ func configureViews(api *{{.Package}}.{{ pascalize .Name }}API) {
 
     resp := workflows.{{ pascalize $workflow }}(&var_map).(map[string]interface{})
 
-    status_code, _ := resp["status_code"].(int64)
+    status_code, _ := conv.Int(resp["status_code"])
 
     switch status_code {
     {{ range .Responses }}case {{.Code}}:
