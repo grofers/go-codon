@@ -6,6 +6,7 @@ import (
 	"log"
 	"text/template"
 	"strings"
+	shared "github.com/grofers/go-codon/shared"
 )
 
 // var templates = template.Must(template.ParseGlob("*"))
@@ -13,7 +14,8 @@ import (
 type bootstrapper struct {
 	CurrentDirPath string
 	CurrentDirName string
-	ProjectName string
+	ProjectName    string
+	ProjectPath    string
 }
 
 func (bs *bootstrapper) UpdateCurrentDirPath() error {
@@ -27,6 +29,13 @@ func (bs *bootstrapper) UpdateCurrentDirPath() error {
 	_, bs.CurrentDirName = filepath.Split(pwd)
 	bs.ProjectName = bs.CurrentDirName
 	log.Println("Working with project name:", bs.ProjectName)
+
+	bs.ProjectPath, err = shared.BaseImport(bs.CurrentDirPath)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
 	return nil
 }
 
@@ -38,6 +47,10 @@ func (bs *bootstrapper) process_templates() error {
 		if strings.HasSuffix(asset, ".gotmpl") {
 			t = t.Delims("{|{", "}|}")
 		}
+
+		t = t.Funcs(template.FuncMap{
+			"pascalize": shared.Pascalize,
+		})
 
 		t, err := t.Parse(string(MustAsset(asset)))
 		if err != nil {

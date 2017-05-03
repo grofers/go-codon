@@ -97,7 +97,7 @@ func (g *GoGenerator) Generate() error {
 
 	tmpl, err := template.New("golang.gotmpl").Funcs(template.FuncMap{
 		"escapestring": html_template.JSEscapeString,
-		"pascalize": flowgen_shared.Pascalize,
+		"pascalize": shared.Pascalize,
 	}).ParseFiles(template_location)
 	if err != nil {
 		return err

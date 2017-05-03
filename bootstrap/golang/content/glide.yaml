@@ -1,0 +1,17 @@
+package: {{ .ProjectPath }}
+import:
+- package: github.com/cstockton/go-conv
+- package: github.com/go-openapi/runtime
+- package: github.com/grofers/go-codon
+  subpackages:
+  - runtime
+- package: github.com/jmespath/go-jmespath
+  repo: git@github.com:grofers/go-jmespath.git
+- package: github.com/oleiade/reflections
+  repo: git@github.com:grofers/reflections.git
+- package: golang.org/x/net
+  subpackages:
+  - context
+  - context/ctxhttp
+- package: github.com/tylerb/graceful
+- package: github.com/jessevdk/go-flags

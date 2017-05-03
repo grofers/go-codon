@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"gopkg.in/yaml.v2"
 	goruntime "runtime"
+	"github.com/go-openapi/swag"
 )
 
 
@@ -73,4 +74,18 @@ func BaseImport(tgt string) (string, error) {
 		return "", errors.New("target must reside inside a location in the $GOPATH/src")
 	}
 	return pth, nil
+}
+
+func Pascalize(arg string) string {
+	if len(arg) == 0 || arg[0] > '9' {
+		return swag.ToGoName(arg)
+	}
+	if arg[0] == '+' {
+		return swag.ToGoName("Plus " + arg[1:])
+	}
+	if arg[0] == '-' {
+		return swag.ToGoName("Minus " + arg[1:])
+	}
+
+	return swag.ToGoName("Nr " + arg)
 }

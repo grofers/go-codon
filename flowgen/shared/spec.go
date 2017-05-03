@@ -8,8 +8,8 @@ import (
 	"regexp"
 	"io/ioutil"
 	"gopkg.in/yaml.v2"
-	"github.com/go-openapi/swag"
 	jmespath "github.com/jmespath/go-jmespath"
+	shared "github.com/grofers/go-codon/shared"
 )
 
 type PostSpec struct {
@@ -345,7 +345,7 @@ func processAction(action string) (Action, error) {
 	
 	action_elems := strings.Split(action, ".")
 	for i := 1; i < len(action_elems); i++ {
-		action_elems[i] = Pascalize(action_elems[i])
+		action_elems[i] = shared.Pascalize(action_elems[i])
 	}
 	ret_action.Pascalized = strings.Join(action_elems, ".")
 	ret_action.Type = action_elems[0]
@@ -372,18 +372,4 @@ func createTodoList(map_list []map[string]string) ([]TodoObj, error) {
 		}
 	}
 	return retlist, nil
-}
-
-func Pascalize(arg string) string {
-	if len(arg) == 0 || arg[0] > '9' {
-		return swag.ToGoName(arg)
-	}
-	if arg[0] == '+' {
-		return swag.ToGoName("Plus " + arg[1:])
-	}
-	if arg[0] == '-' {
-		return swag.ToGoName("Minus " + arg[1:])
-	}
-
-	return swag.ToGoName("Nr " + arg)
 }
