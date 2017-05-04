@@ -5,6 +5,10 @@ import:
   repo: git@github.com:grofers/go-swagger.git
   subpackages:
   - generator
+- package: github.com/jmespath/go-jmespath
+  repo: git@github.com:grofers/go-jmespath.git
+- package: github.com/oleiade/reflections
+  repo: git@github.com:grofers/reflections.git
 - package: github.com/spf13/cobra
 - package: github.com/spf13/viper
 - package: gopkg.in/yaml.v2
