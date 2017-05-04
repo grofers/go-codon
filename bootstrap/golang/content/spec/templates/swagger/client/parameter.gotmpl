@@ -98,12 +98,31 @@ func New{{ pascalize .Name }}ParamsFromMap(params *map[string]interface{}) *{{ p
       v_str, _ := conv.Int64(v)
       {{ else if eq .GoType "float64" }}
       v_str, _ := conv.Float64(v)
+      {{ else if eq .GoType "string" }}
+      v_str, _ := conv.String(v)
+      {{ else }}
+      v_str := v.({{ .GoType }})
       {{ end }}
       {{ else }}
       v_str := v.(os.File)
       {{ end }}
       retParams.{{ pascalize .ID }} = &v_str{{ else }}
-      retParams.{{ pascalize .ID }} = v.({{ if not .IsFileParam }}{{ .GoType }}{{ else }}os.File{{end}}){{ end }}
+      {{ if not .IsFileParam }}
+      {{ if eq .GoType "bool" }}
+      retParams.{{ pascalize .ID }}, _ = conv.Bool(v)
+      {{ else if eq .GoType "int64" }}
+      retParams.{{ pascalize .ID }}, _ = conv.Int64(v)
+      {{ else if eq .GoType "float64" }}
+      retParams.{{ pascalize .ID }}, _ = conv.Float64(v)
+      {{ else if eq .GoType "string" }}
+      retParams.{{ pascalize .ID }}, _ = conv.String(v)
+      {{ else }}
+      retParams.{{ pascalize .ID }} = v.({{ .GoType }})
+      {{ end }}
+      {{ else }}
+      retParams.{{ pascalize .ID }} = v.(os.File)
+      {{ end }}
+      {{ end }}
     {{ end }}
     }
   }
