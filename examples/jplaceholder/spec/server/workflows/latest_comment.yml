@@ -1,0 +1,24 @@
+name: get_latest_comment
+
+start:
+    - get_posts
+
+tasks:
+    get_posts:
+      action: clients.jplaceholder.get_posts
+      input:
+        userId: <%jmes main.userId %>
+      publish:
+        latest_post: <%jmes action.max_by([], &id) %>
+      on-success:
+        - get_comments: true
+    get_comments:
+      action: clients.jplaceholder.get_comments
+      input:
+          postId: <%jmes main.latest_post.id %>
+      publish:
+          latest_comment: <%jmes action.max_by([], &id) %>
+
+output:
+    body: <%jmes main.latest_comment %>
+    status_code: 200

@@ -1,0 +1,1 @@
+Place all the swagger specifications for your upstream services in this folder. Clients will be generated from those specifications.

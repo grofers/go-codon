@@ -1,0 +1,7 @@
+endpoints:
+  jplaceholder:
+    scheme: https
+    host: jsonplaceholder.typicode.com
+    client: jplaceholder
+constants:
+  any_key: "any_value"

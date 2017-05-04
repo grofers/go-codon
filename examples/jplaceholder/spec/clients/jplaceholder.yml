@@ -1,0 +1,61 @@
+swagger: '2.0'
+info:
+  title: Jsonplaceholder sample api
+  version: "1.0.0"
+basePath: /
+produces:
+  - application/json
+consumes:
+  - application/json
+paths:
+  '/posts':
+    get:
+      parameters:
+        - name: userId
+          in: query
+          type: integer
+          required: false
+      responses:
+        200:
+          description: List of posts
+          schema:
+            $ref: '#/definitions/ObjectResponse'
+  '/comments':
+    get:
+      parameters:
+        - name: postId
+          in: query
+          type: integer
+          required: false
+      responses:
+        200:
+          description: List of comments
+          schema:
+            $ref: '#/definitions/ObjectResponse'
+definitions:
+  ObjectResponse:
+    type: object
+  Post:
+    type: object
+    properties:
+      userId:
+        type: integer
+      id:
+        type: integer
+      title:
+        type: string
+      body:
+        type: string
+  Comment:
+    type: object
+    properties:
+      postId:
+        type: integer
+      id:
+        type: integer
+      name:
+        type: string
+      email:
+        type: string
+      body:
+        type: string
