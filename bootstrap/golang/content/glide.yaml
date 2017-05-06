@@ -2,6 +2,10 @@ package: {{ .ProjectPath }}
 import:
 - package: github.com/cstockton/go-conv
 - package: github.com/go-openapi/runtime
+- package: github.com/go-openapi/analysis
+- package: github.com/go-openapi/loads
+- package: github.com/go-openapi/spec
+- package: github.com/go-openapi/validate
 - package: github.com/grofers/go-codon
   subpackages:
   - runtime
