@@ -39,7 +39,11 @@ type Client struct {
 {{ .Description }}{{ end }}{{ else if .Description}}{{ .Description }}{{ else }}{{ humanize .Name }} API{{ end }}
 */
 func (a *Client) {{ pascalize .Name }}(all_params *map[string]interface{}) {{ if .SuccessResponse }}({{ range .SuccessResponses }}*{{ pascalize .Name }}, {{ end }}{{ end }}error{{ if .SuccessResponse }}){{ end }} {
-  params := New{{ pascalize .Name }}ParamsFromMap(all_params)
+  {{ $length := len .SuccessResponses }}
+  params, err := New{{ pascalize .Name }}ParamsFromMap(all_params)
+  if err != nil {
+    return {{ if .SuccessResponse }}{{ padSurround "nil" "nil" 0 $length }}, {{ end }}err
+  }
   {{ if .Authorized }}
   var authInfo runtime.ClientAuthInfoWriter
   if _, ok := all_params["BasicAuthUsername"]; ok {
@@ -50,7 +54,6 @@ func (a *Client) {{ pascalize .Name }}(all_params *map[string]interface{}) {{ if
   var writer io.Writer
   writer = all_params["StreamingWriter"].(io.Writer)
   {{ end }}
-  {{ $length := len .SuccessResponses }}
   {{ if .SuccessResponse }}result{{else}}_{{ end }}, err := a.transport.Submit(&runtime.ClientOperation{
     ID: {{ printf "%q" .Name }},
     Method: {{ printf "%q" .Method }},
