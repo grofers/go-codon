@@ -127,6 +127,9 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map *map[string]interfa
 // {{$expr}} -> {{$expr_obj}}
 func {{$.OrigSpec.Name}}_expr_{{$expr_obj.Srno}}(var_map *map[string]interface{}) (result interface{}, err error) {
 	{{if eq $expr_obj.Type "json"}}err = json.Unmarshal([]byte("{{escapestring $expr_obj.Raw}}"), &result){{else if eq $expr_obj.Type "jmes"}}result, err = {{$.OrigSpec.Name}}_eval_{{$expr_obj.Srno}}.Search(var_map){{end}}
+	if err == nil {
+		result = resolvePointers(result)
+	}
 	return
 }
 {{end}}

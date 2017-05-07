@@ -19,3 +19,4 @@ import:
   - context/ctxhttp
 - package: github.com/tylerb/graceful
 - package: github.com/jessevdk/go-flags
+- package: github.com/mitchellh/mapstructure
