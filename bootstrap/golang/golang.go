@@ -72,7 +72,14 @@ func (bs *bootstrapper) process_templates() error {
 			return err
 		}
 
-		f, err := os.Create(new_asset_path)
+		var perms os.FileMode
+		if strings.HasSuffix(asset, ".sh") {
+			perms = 0775
+		} else {
+			perms = 0666
+		}
+
+		f, err := os.OpenFile(new_asset_path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, perms)
 		defer f.Close()
 		if err != nil {
 			log.Println("Failed to create file:", err)

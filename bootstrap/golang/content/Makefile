@@ -5,10 +5,10 @@ ibuild:
 	go build -o {{pascalize .ProjectName}} server/cmd/{{.ProjectName}}-service-server/main.go
 
 igenerate:
-	codon generate
+	./scripts/generate.sh
 
-generate: installdependencies igenerate
+generate: igenerate
 
-build: installdependencies igenerate ibuild
+build: installdependencies ibuild
 
 .PHONY: installdependencies ibuild igenerate generate build
