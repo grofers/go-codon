@@ -44,6 +44,15 @@ type Task struct {
 	OnComplete		[]map[string]string			`yaml:"on-complete"`
 	OnCompleteList	[]TodoObj					`yaml:"-"`
 	Timeout			int64						`yaml:"timeout"`
+	WithItems		string						`yaml:"with-items"`
+	Loop			LoopInfo					`yaml:"loop"`
+}
+
+type LoopInfo struct {
+	TaskName		string				`yaml:"task"`
+	Input			map[string]string	`yaml:"input"`
+	Publish			map[string]string	`yaml:"publish"`
+	ErrorPublish	map[string]string	`yaml:"publish-on-error"`
 }
 
 type TodoObj struct {
@@ -143,49 +152,43 @@ func (s *Spec) getActionMap() (map[string]Action, error) {
 	return all_actions, nil
 }
 
+func (s *Spec) appendExpression(all_exprs map[string]Expression, expr *string, counter *int) error {
+	if _, ok := all_exprs[*expr]; ok {
+		return nil
+	}
+	expr_obj, err := s.processExpression(*expr)
+	if err != nil {
+		log.Println("Unable to process expression:", *expr)
+		return err
+	}
+	expr_obj.Srno = *counter
+	(*counter)++
+	all_exprs[*expr] = expr_obj
+	return nil
+}
+
 func (s *Spec) getExpressionMap() (map[string]Expression, error) {
 	all_exprs := make(map[string]Expression)
 	counter := 1
 
 	for _, task := range s.Tasks {
 		for _, expr := range task.Input {
-			if _, ok := all_exprs[expr]; ok {
-				continue
-			}
-			expr_obj, err := s.processExpression(expr)
+			err := s.appendExpression(all_exprs, &expr, &counter)
 			if err != nil {
-				log.Println("Unable to process expression:", expr)
 				return nil, err
 			}
-			expr_obj.Srno = counter
-			counter++
-			all_exprs[expr] = expr_obj
 		}
 		for _, expr := range task.Publish {
-			if _, ok := all_exprs[expr]; ok {
-				continue
-			}
-			expr_obj, err := s.processExpression(expr)
+			err := s.appendExpression(all_exprs, &expr, &counter)
 			if err != nil {
-				log.Println("Unable to process expression:", expr)
 				return nil, err
 			}
-			expr_obj.Srno = counter
-			counter++
-			all_exprs[expr] = expr_obj
 		}
 		for _, expr := range task.ErrorPublish {
-			if _, ok := all_exprs[expr]; ok {
-				continue
-			}
-			expr_obj, err := s.processExpression(expr)
+			err := s.appendExpression(all_exprs, &expr, &counter)
 			if err != nil {
-				log.Println("Unable to process expression:", expr)
 				return nil, err
 			}
-			expr_obj.Srno = counter
-			counter++
-			all_exprs[expr] = expr_obj
 		}
 		for _, error_map := range task.OnError {
 			if len(error_map) != 1 {
@@ -193,17 +196,10 @@ func (s *Spec) getExpressionMap() (map[string]Expression, error) {
 			}
 			var expr string
 			for _, ce := range error_map {expr = ce;break;}
-			if _, ok := all_exprs[expr]; ok {
-				continue
-			}
-			expr_obj, err := s.processExpression(expr)
+			err := s.appendExpression(all_exprs, &expr, &counter)
 			if err != nil {
-				log.Println("Unable to process expression:", expr)
 				return nil, err
 			}
-			expr_obj.Srno = counter
-			counter++
-			all_exprs[expr] = expr_obj
 		}
 		for _, success_map := range task.OnSuccess {
 			if len(success_map) != 1 {
@@ -211,17 +207,10 @@ func (s *Spec) getExpressionMap() (map[string]Expression, error) {
 			}
 			var expr string
 			for _, ce := range success_map {expr = ce;break;}
-			if _, ok := all_exprs[expr]; ok {
-				continue
-			}
-			expr_obj, err := s.processExpression(expr)
+			err := s.appendExpression(all_exprs, &expr, &counter)
 			if err != nil {
-				log.Println("Unable to process expression:", expr)
 				return nil, err
 			}
-			expr_obj.Srno = counter
-			counter++
-			all_exprs[expr] = expr_obj
 		}
 		for _, complete_map := range task.OnComplete {
 			if len(complete_map) != 1 {
@@ -229,17 +218,35 @@ func (s *Spec) getExpressionMap() (map[string]Expression, error) {
 			}
 			var expr string
 			for _, ce := range complete_map {expr = ce;break;}
-			if _, ok := all_exprs[expr]; ok {
-				continue
-			}
-			expr_obj, err := s.processExpression(expr)
+			err := s.appendExpression(all_exprs, &expr, &counter)
 			if err != nil {
-				log.Println("Unable to process expression:", expr)
 				return nil, err
 			}
-			expr_obj.Srno = counter
-			counter++
-			all_exprs[expr] = expr_obj
+		}
+		if task.WithItems != "" {
+			expr := task.WithItems
+			err := s.appendExpression(all_exprs, &expr, &counter)
+			if err != nil {
+				return nil, err
+			}
+			for _, expr := range task.Loop.Input {
+				err := s.appendExpression(all_exprs, &expr, &counter)
+				if err != nil {
+					return nil, err
+				}
+			}
+			for _, expr := range task.Loop.Publish {
+				err := s.appendExpression(all_exprs, &expr, &counter)
+				if err != nil {
+					return nil, err
+				}
+			}
+			for _, expr := range task.Loop.ErrorPublish {
+				err := s.appendExpression(all_exprs, &expr, &counter)
+				if err != nil {
+					return nil, err
+				}
+			}
 		}
 	}
 

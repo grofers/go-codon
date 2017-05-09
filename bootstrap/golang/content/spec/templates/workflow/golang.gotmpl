@@ -58,7 +58,9 @@ func {{ pascalize .OrigSpec.Name }}(var_map *map[string]interface{}) interface{}
 }
 
 {{range $expr, $expr_obj := .ExpressionMap}}
-{{if eq $expr_obj.Type "jmes"}}var {{$.OrigSpec.Name}}_eval_{{$expr_obj.Srno}} = jmespath.MustCompile("{{escapestring $expr_obj.Raw}}"){{end}}{{end}}{{range $index, $element := .OrigSpec.Tasks}}
+{{if eq $expr_obj.Type "jmes"}}var {{$.OrigSpec.Name}}_eval_{{$expr_obj.Srno}} = jmespath.MustCompile("{{escapestring $expr_obj.Raw}}"){{end}}{{end}}
+
+{{range $index, $element := .OrigSpec.Tasks}}
 func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map *map[string]interface{}) error {
 	expr_map := make(map[string]interface{})
 	expr_map["main"] = var_map
@@ -90,6 +92,54 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map *map[string]interfa
 	}
 	{{ end }}
 	expr_map["action"] = resp_map
+	{{ else if $element.WithItems }}
+	iterlist_interface, _ := {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element.WithItems).Srno }}(&expr_map)
+	iterlist, ok := iterlist_interface.([]interface{})
+	if !ok {
+		return fmt.Errorf("Error casting iteration list into array: %s\n", iterlist_interface)
+	}
+
+	var err interface{} = nil
+	var wg sync.WaitGroup
+	wg.Add(len(iterlist))
+
+	var_maps := []map[string]interface{} {}
+
+	for _, element := range iterlist {
+		expr_map["item"] = element
+		new_var_map := make(map[string]interface{})
+		{{range $index2, $element2 := $element.Loop.Input}}
+		new_var_map["{{$index2}}"], _ = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2).Srno }}(&expr_map){{end}}
+		var_maps = append(var_maps, new_var_map)
+
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					err = r
+				}
+				wg.Done()
+			}()
+			{{printf "task_%s__%s" $.OrigSpec.Name $element.Loop.TaskName}}(&new_var_map)
+		}()
+	}
+	expr_map["item"] = nil
+
+	wg.Wait()
+
+	if err != nil {
+		panic(err)
+	}
+
+	{{range $index2, $element2 := $element.Loop.Publish}}
+	(*var_map)["{{$index2}}"] = []interface{}{}
+	{{end}}
+	for index, element := range iterlist {
+		expr_map["item"] = element
+		expr_map["task"] = var_maps[index]
+		{{range $index2, $element2 := $element.Loop.Publish}}
+		(*var_map)["{{$index2}}"] = append((*var_map)["{{$index2}}"].([]interface{}), maybe({{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2).Srno }}(&expr_map)))
+		{{end}}
+	}
 	{{end}}
 	{{range $index2, $element2 := $element.Publish}}
 	(*var_map)["{{$index2}}"], _ = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2).Srno }}(&expr_map)
@@ -123,6 +173,7 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map *map[string]interfa
 	return nil
 }
 {{end}}
+
 {{range $expr, $expr_obj := .ExpressionMap}}
 // {{$expr}} -> {{$expr_obj}}
 func {{$.OrigSpec.Name}}_expr_{{$expr_obj.Srno}}(var_map *map[string]interface{}) (result interface{}, err error) {
