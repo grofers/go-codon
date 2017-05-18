@@ -14,6 +14,7 @@ import (
   {{end}}
   {{range $key, $value := .Imports}}{{$key}} {{ printf "%q" $value}}
   {{end}}
+  "github.com/grofers/go-codon/runtime/templates"
 )
 {{ $package := .Package }}
 
@@ -96,6 +97,7 @@ func configureTLS(tlsConfig *tls.Config) {
 // This function can be called multiple times, depending on the number of serving schemes.
 // scheme value will be set accordingly: "http", "https" or "unix"
 func configureServer(s *graceful.Server, scheme string) {
+	templates.Init(bintemplate.AssetNames, bintemplate.Asset)
 }
 
 // The middleware configuration is for the handler executors. These do not apply to the swagger.json document.

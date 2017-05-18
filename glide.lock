@@ -66,7 +66,7 @@ imports:
 - name: github.com/inconshreveable/mousetrap
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/jmespath/go-jmespath
-  version: bcc758025b246826a8b48ddb50f3dd8ede5f500a
+  version: 202d8d67c5256ebd5bd8011ea23a13bbaa2af431
   repo: git@github.com:grofers/go-jmespath.git
 - name: github.com/juju/errors
   version: 6f54ff6318409d31ff16261533ce2c8381a4fd5d
