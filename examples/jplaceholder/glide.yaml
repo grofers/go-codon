@@ -1,10 +1,13 @@
-package: github.com/grofers/hello-codon
+package: github.com/grofers/go-codon/examples/jplaceholder
 import:
 - package: github.com/cstockton/go-conv
 - package: github.com/go-openapi/runtime
 - package: github.com/go-openapi/analysis
+- package: github.com/go-openapi/errors
 - package: github.com/go-openapi/loads
 - package: github.com/go-openapi/spec
+- package: github.com/go-openapi/strfmt
+- package: github.com/go-openapi/swag
 - package: github.com/go-openapi/validate
 - package: github.com/grofers/go-codon
   subpackages:
