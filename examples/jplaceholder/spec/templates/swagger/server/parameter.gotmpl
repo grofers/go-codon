@@ -66,7 +66,6 @@ package {{ .Package }}
 
 import (
   "net/http"
-  "encoding/json"
 
   "github.com/go-openapi/errors"
   "github.com/go-openapi/validate"
@@ -89,9 +88,13 @@ func New{{ pascalize .Name }}Params() {{ pascalize .Name }}Params {
   {{ range .Params }}{{ if .HasDefault }}{{ if not .IsFileParam }}{{ varname .ID}}Default = {{ if .IsPrimitive}}{{.GoType}}({{ end}}{{ printf "%#v" .Default }}{{ if .IsPrimitive }}){{ end }}
   {{ end }}{{ end }}{{end}}
   )
-  return {{ pascalize .Name }}Params{ {{ range .Params }}{{ if .HasDefault }}
-    {{ pascalize .ID}}: {{ if and (not .IsArray) (not .HasDiscriminator) (not .IsInterface) (not .IsStream) .IsNullable }}&{{ end }}{{ varname .ID }}Default,
-  {{ end }}{{ end }} }
+  return {{ pascalize .Name }}Params{
+    Params: map[string]interface{} {
+      {{ range .Params }}{{ if .HasDefault }}
+      {{.Path}}: {{ if and (not .IsArray) (not .HasDiscriminator) (not .IsInterface) (not .IsStream) .IsNullable }}&{{ end }}{{ varname .ID }}Default,
+      {{ end }}{{ end }}
+    },
+  }
 }
 
 // {{ pascalize .Name }}Params contains all the bound params for the {{ humanize .Name }} operation
@@ -101,41 +104,16 @@ func New{{ pascalize .Name }}Params() {{ pascalize .Name }}Params {
 type {{ pascalize .Name }}Params struct {
 
   // HTTP Request Object
-  HTTPRequest *http.Request `json:"-"`
+  HTTPRequest *http.Request
 
-  {{ range .Params }}/*{{ if .Description }}{{ .Description }}{{ end }}{{ if .Required }}
-  Required: true{{ end }}{{ if .Maximum }}
-  Maximum: {{ if .ExclusiveMaximum }}< {{ end }}{{ .Maximum }}{{ end }}{{ if .Minimum }}
-  Minimum: {{ if .ExclusiveMinimum }}> {{ end }}{{ .Minimum }}{{ end }}{{ if .MultipleOf }}
-  Multiple Of: {{ .MultipleOf }}{{ end }}{{ if .MaxLength }}
-  Max Length: {{ .MaxLength }}{{ end }}{{ if .MinLength }}
-  Min Length: {{ .MinLength }}{{ end }}{{ if .Pattern }}
-  Pattern: {{ .Pattern }}{{ end }}{{ if .MaxItems }}
-  Max Items: {{ .MaxItems }}{{ end }}{{ if .MinItems }}
-  Min Items: {{ .MinItems }}{{ end }}{{ if .UniqueItems }}
-  Unique: true{{ end }}{{ if .Location }}
-  In: {{ .Location }}{{ end }}{{ if .CollectionFormat }}
-  Collection Format: {{ .CollectionFormat }}{{ end }}{{ if .HasDefault }}
-  Default: {{ printf "%#v" .Default }}{{ end }}
-  */
-  {{ if not .Schema }}{{ pascalize .ID }} {{ if and (not .IsArray) (not .HasDiscriminator) (not .IsInterface) (not .IsFileParam) (not .IsStream) .IsNullable }}*{{ end }}{{.GoType}} `json:{{ .Path }}`{{ else }}{{ pascalize .Name }} {{ if and (not .Schema.IsBaseType) .IsNullable (not .Schema.IsStream) }}*{{ end }}{{.GoType}} `json:{{ .Path }}`{{ end }}
-  {{ end}}
+  Params map[string]interface{}
 }
 
 // GetParamsMap returns the parameters in a map format with original names
 // as keys.
 // TODO: Use a map to store the params instead of a struct. Or use mapstructure.
 func ({{ .ReceiverName }} *{{ pascalize .Name }}Params) GetParamsMap() (map[string]interface{}, error) {
-  var_map := make(map[string]interface{})
-  t, err := json.Marshal(*{{ .ReceiverName }})
-  if err != nil {
-    return nil, err
-  }
-  err = json.Unmarshal(t, &var_map)
-  if err != nil {
-    return nil, err
-  }
-  return var_map, nil
+  return o.Params, nil
 }
 
 // BindRequest both binds and validates a request, it assumes that complex things implement a Validatable(strfmt.Registry) error interface
@@ -236,6 +214,7 @@ func ({{ .ReceiverName }} *{{ pascalize .Name }}Params) BindRequest(r *http.Requ
 
 {{ $className := (pascalize .Name) }}
 {{ range .Params }}
+{{ $receiverName := .ReceiverName }}
 {{ if not (or .IsBodyParam .IsFileParam) }}
 {{ if or .IsPrimitive .IsCustomFormatter }}
 func ({{ .ReceiverName }} *{{ $className }}Params) bind{{ pascalize .ID }}(rawData []string, hasKey bool, formats strfmt.Registry) error {
@@ -251,7 +230,7 @@ func ({{ .ReceiverName }} *{{ $className }}Params) bind{{ pascalize .ID }}(rawDa
   }
   {{ else if and ( not .IsPathParam ) (or (not .Required) .AllowEmptyValue) }}if raw == "" { // empty values pass all other validations
     {{ if .HasDefault }}var {{ camelize .Name}}Default {{ if not .IsFileParam }}{{ .GoType }}{{ else }}os.File{{end}} = {{ if .IsPrimitive}}{{.GoType}}({{ end}}{{ printf "%#v" .Default }}{{ if .IsPrimitive }}){{ end }}
-    {{ .ValueExpression }} = {{ if and (not .IsArray) (not .HasDiscriminator) (or .IsNullable  ) (not .IsStream) }}&{{ end }}{{ camelize .Name }}Default
+    {{$receiverName}}.Params[{{.Path}}] = {{ if and (not .IsArray) (not .HasDiscriminator) (or .IsNullable  ) (not .IsStream) }}&{{ end }}{{ camelize .Name }}Default
     {{ end }}return nil
   }
   {{ end }}
@@ -259,13 +238,13 @@ func ({{ .ReceiverName }} *{{ $className }}Params) bind{{ pascalize .ID }}(rawDa
   if err != nil {
     return errors.InvalidType({{ .Path }}, {{ printf "%q" .Location }}, {{ printf "%q" .GoType }}, raw)
   }
-  {{ .ValueExpression }} = {{ if .IsNullable }}&{{ end }}value
+  {{$receiverName}}.Params[{{.Path}}] = {{ if .IsNullable }}&{{ end }}value
   {{ else if .IsCustomFormatter }}value, err := formats.Parse({{ printf "%q" .SwaggerFormat }}, raw)
   if err != nil {
     return errors.InvalidType({{ .Path }}, {{ printf "%q" .Location }}, {{ printf "%q" .GoType }}, raw)
   }
-  {{ .ValueExpression }} = {{ if and (not .IsArray) (not .HasDiscriminator) (not .IsFileParam) (not .IsStream) (not .IsNullable) }}*{{ end }}(value.(*{{ .GoType }}))
-  {{else}}{{ .ValueExpression }} = {{ if .IsNullable }}&{{ end }}raw
+  {{$receiverName}}.Params[{{.Path}}] = {{ if and (not .IsArray) (not .HasDiscriminator) (not .IsFileParam) (not .IsStream) (not .IsNullable) }}*{{ end }}(value.(*{{ .GoType }}))
+  {{else}}{{$receiverName}}.Params[{{.Path}}] = {{ if .IsNullable }}&{{ end }}raw
   {{ end }}
   {{if .HasValidations }}if err := {{ .ReceiverName }}.validate{{ pascalize .ID }}(formats); err != nil {
     return err
@@ -292,12 +271,12 @@ func ({{ .ReceiverName }} *{{ $className }}Params) bind{{ pascalize .ID }}(rawDa
   {{ end }}
   {{ if not .Required }}{{ if .HasDefault }}defValue := swag.SplitByFormat({{ .Default }}, {{ printf "%q" .CollectionFormat }})
   if len({{ varname .Child.ValueExpression }}C) == 0 && len(defValue) > 0 {
-    {{ .ValueExpression }} = defValue
+    {{$receiverName}}.Params[{{.Path}}] = defValue
   {{ else }}if len({{ varname .Child.ValueExpression }}C) == 0 {
     return nil{{ end }}
   }{{ end }}
   {{ template "sliceparambinder" . }}
-  {{ .ValueExpression }} = {{ varname .Child.ValueExpression }}R
+  {{$receiverName}}.Params[{{.Path}}] = {{ varname .Child.ValueExpression }}R
   {{ if .HasSliceValidations }}if err := {{ .ReceiverName }}.validate{{ pascalize .ID }}(formats); err != nil {
     return err
   }

@@ -5,7 +5,7 @@ ibuild:
 	go build -o Jplaceholder server/cmd/jplaceholder-service-server/main.go
 
 igenerate:
-	codon generate
+	./scripts/generate.sh
 
 generate: installdependencies igenerate
 

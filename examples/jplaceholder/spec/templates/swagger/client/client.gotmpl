@@ -6,6 +6,7 @@ package {{ .Name }}
 import (
   "net/http"
   "github.com/go-openapi/errors"
+  httptransport "github.com/go-openapi/runtime/client"
   "github.com/go-openapi/swag"
   "github.com/go-openapi/runtime"
   "github.com/go-openapi/validate"
@@ -39,18 +40,21 @@ type Client struct {
 {{ .Description }}{{ end }}{{ else if .Description}}{{ .Description }}{{ else }}{{ humanize .Name }} API{{ end }}
 */
 func (a *Client) {{ pascalize .Name }}(all_params *map[string]interface{}) {{ if .SuccessResponse }}({{ range .SuccessResponses }}*{{ pascalize .Name }}, {{ end }}{{ end }}error{{ if .SuccessResponse }}){{ end }} {
-  params := New{{ pascalize .Name }}ParamsFromMap(all_params)
+  {{ $length := len .SuccessResponses }}
+  params, err := New{{ pascalize .Name }}ParamsFromMap(all_params)
+  if err != nil {
+    return {{ if .SuccessResponse }}{{ padSurround "nil" "nil" 0 $length }}, {{ end }}err
+  }
   {{ if .Authorized }}
   var authInfo runtime.ClientAuthInfoWriter
-  if _, ok := all_params["BasicAuthUsername"]; ok {
-    authInfo = httptransport.BasicAuth(all_params["BasicAuthUsername"], all_params["BasicAuthPassword"])
+  if _, ok := (*all_params)["BasicAuthUsername"]; ok {
+    authInfo = httptransport.BasicAuth((*all_params)["BasicAuthUsername"].(string), (*all_params)["BasicAuthPassword"].(string))
   }
   {{ end }}
   {{ if .HasStreamingResponse }}
   var writer io.Writer
   writer = all_params["StreamingWriter"].(io.Writer)
   {{ end }}
-  {{ $length := len .SuccessResponses }}
   {{ if .SuccessResponse }}result{{else}}_{{ end }}, err := a.transport.Submit(&runtime.ClientOperation{
     ID: {{ printf "%q" .Name }},
     Method: {{ printf "%q" .Method }},

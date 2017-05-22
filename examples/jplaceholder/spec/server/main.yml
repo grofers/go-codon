@@ -27,6 +27,19 @@ paths:
           description: Latest Comment
           schema:
             $ref: '#/definitions/ObjectResponse'
+  /posts:
+    get:
+      parameters:
+        - name: userId
+          in: query
+          type: integer
+          required: false
+      x-workflow: get_posts_comments
+      responses:
+        200:
+          description: Posts with comments
+          schema:
+            $ref: '#/definitions/ObjectResponse'
 definitions:
   HealthResponse:
     type: object

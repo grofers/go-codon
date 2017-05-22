@@ -16,8 +16,7 @@ import (
   cr "github.com/go-openapi/runtime/client"
 
   strfmt "github.com/go-openapi/strfmt"
-
-  conv "github.com/cstockton/go-conv"
+  mapstructure "github.com/mitchellh/mapstructure"
 
   {{ range .DefaultImports }}{{ printf "%q" .}}
   {{ end }}
@@ -80,53 +79,13 @@ func New{{ pascalize .Name }}ParamsWithHTTPClient(client *http.Client) *{{ pasca
   }
 }
 
-func New{{ pascalize .Name }}ParamsFromMap(params *map[string]interface{}) *{{ pascalize .Name }}Params {
+func New{{ pascalize .Name }}ParamsFromMap(params *map[string]interface{}) (*{{ pascalize .Name }}Params, error) {
   retParams := New{{ pascalize .Name }}Params()
-  for k, v := range *params {
-    if v == nil {
-      continue
-    }
-    switch k {
-    case "_timeout":
-      retParams.SetTimeout(time.Duration(v.(int64)) * time.Millisecond)
-    {{ range .Params }}
-    case {{ .Path }}:{{ if and (not .IsArray) (not .IsMap) (not .HasDiscriminator) (not .IsInterface) (not .IsStream) (or .IsNullable  ) }}
-      {{ if not .IsFileParam }}
-      {{ if eq .GoType "bool" }}
-      v_str, _ := conv.Bool(v)
-      {{ else if eq .GoType "int64" }}
-      v_str, _ := conv.Int64(v)
-      {{ else if eq .GoType "float64" }}
-      v_str, _ := conv.Float64(v)
-      {{ else if eq .GoType "string" }}
-      v_str, _ := conv.String(v)
-      {{ else }}
-      v_str := v.({{ .GoType }})
-      {{ end }}
-      {{ else }}
-      v_str := v.(os.File)
-      {{ end }}
-      retParams.{{ pascalize .ID }} = &v_str{{ else }}
-      {{ if not .IsFileParam }}
-      {{ if eq .GoType "bool" }}
-      retParams.{{ pascalize .ID }}, _ = conv.Bool(v)
-      {{ else if eq .GoType "int64" }}
-      retParams.{{ pascalize .ID }}, _ = conv.Int64(v)
-      {{ else if eq .GoType "float64" }}
-      retParams.{{ pascalize .ID }}, _ = conv.Float64(v)
-      {{ else if eq .GoType "string" }}
-      retParams.{{ pascalize .ID }}, _ = conv.String(v)
-      {{ else }}
-      retParams.{{ pascalize .ID }} = v.({{ .GoType }})
-      {{ end }}
-      {{ else }}
-      retParams.{{ pascalize .ID }} = v.(os.File)
-      {{ end }}
-      {{ end }}
-    {{ end }}
-    }
+  err := mapstructure.WeakDecode(params, &retParams)
+  if err != nil {
+    return nil, err
   }
-  return retParams
+  return retParams, nil
 }
 
 /*{{ pascalize .Name }}Params contains all the parameters to send to the API endpoint
@@ -138,12 +97,12 @@ type {{ pascalize .Name }}Params struct {
   {{ .Description }}
 
   {{ end }}*/
-  {{ pascalize .ID }} {{ if and (not .IsArray) (not .IsMap) (not .HasDiscriminator) (not .IsInterface) (not .IsStream) (or .IsNullable  ) }}*{{ end }}{{ if not .IsFileParam }}{{ .GoType }}{{ else }}os.File{{end}}
+  {{ pascalize .ID }} {{ if and (not .IsArray) (not .IsMap) (not .HasDiscriminator) (not .IsInterface) (not .IsStream) (or .IsNullable  ) }}*{{ end }}{{ if not .IsFileParam }}{{ .GoType }}{{ else }}os.File{{end}} `mapstructure:{{.Path}}`
   {{ end }}
 
-  {{ camelize .TimeoutName }} time.Duration
-  Context context.Context
-  HTTPClient *http.Client
+  {{ camelize .TimeoutName }} time.Duration `mapstructure:"_timeout"`
+  Context context.Context `mapstructure:"-"`
+  HTTPClient *http.Client `mapstructure:"-"`
 }
 
 // With{{ pascalize .TimeoutName }} adds the timeout to the {{ humanize .Name }} params

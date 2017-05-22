@@ -188,8 +188,6 @@ import (
   "github.com/grofers/go-codon/runtime/templates"
 )
 
-var _ = templates.Init(bintemplate.AssetNames, bintemplate.Asset)
-
 {{ range .Responses }}
 {{ template "serverresponse" . }}
 {{ end }}

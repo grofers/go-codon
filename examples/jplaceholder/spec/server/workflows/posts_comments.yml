@@ -1,0 +1,32 @@
+name: get_posts_comments
+
+start:
+    - get_posts
+
+tasks:
+    get_posts:
+      action: clients.jplaceholder.get_posts
+      input:
+        userId: <%jmes main.userId %>
+      publish:
+        posts: <%jmes action %>
+      on-success:
+        - get_all_comments: true
+    get_comments:
+      action: clients.jplaceholder.get_comments
+      input:
+          postId: <%jmes main.postId %>
+      publish:
+          comments: <%jmes action %>
+    get_all_comments:
+      with-items: <%jmes main.posts %>
+      loop:
+        task: get_comments
+        input:
+          postId: <%jmes item.id %>
+        publish:
+          combined: <%jmes {"post_details":item,"comments":task.comments} %>
+
+output:
+    body: <%jmes main.combined %>
+    status_code: 200
