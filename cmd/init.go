@@ -15,6 +15,7 @@
 package cmd
 
 import (
+	"os"
 	"log"
 	"github.com/spf13/cobra"
 
@@ -34,7 +35,7 @@ directory.`,
 			log.Println("Bootstrap successful")
 		} else {
 			log.Println("Bootstrap failed")
-			// TODO: Exit with -1
+			os.Exit(1)
 		}
 	},
 }

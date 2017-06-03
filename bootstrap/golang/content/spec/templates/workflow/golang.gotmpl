@@ -61,7 +61,7 @@ func {{ pascalize .OrigSpec.Name }}(var_map *map[string]interface{}) interface{}
 }
 
 {{range $expr, $expr_obj := .ExpressionMap}}
-{{if eq $expr_obj.Type "jmes"}}var {{$.OrigSpec.Name}}_eval_{{$expr_obj.Srno}} = jmespath.MustCompile("{{escapestring $expr_obj.Raw}}"){{end}}{{end}}
+{{if eq $expr_obj.Type "jmes"}}var {{$.OrigSpec.Name}}_eval_{{$expr_obj.Srno}} = jmespath.MustCompile("{{escapestring $expr_obj.Raw}}"){{end}}{{if eq $expr_obj.Type "jngo"}}var {{$.OrigSpec.Name}}_eval_{{$expr_obj.Srno}} = pongo2.Must(pongo2.FromString("{{escapestring $expr_obj.Raw}}")){{end}}{{end}}
 
 {{range $index, $element := .OrigSpec.Tasks}}
 func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map *map[string]interface{}, var_map_mutex *sync.RWMutex) error {
@@ -231,7 +231,13 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map *map[string]interfa
 {{range $expr, $expr_obj := .ExpressionMap}}
 // {{$expr}} -> {{$expr_obj}}
 func {{$.OrigSpec.Name}}_expr_{{$expr_obj.Srno}}(var_map *map[string]interface{}) (result interface{}, err error) {
-	{{if eq $expr_obj.Type "json"}}err = json.Unmarshal([]byte("{{escapestring $expr_obj.Raw}}"), &result){{else if eq $expr_obj.Type "jmes"}}result, err = {{$.OrigSpec.Name}}_eval_{{$expr_obj.Srno}}.Search(var_map){{end}}
+	{{if eq $expr_obj.Type "json"}}err = json.Unmarshal([]byte("{{escapestring $expr_obj.Raw}}"), &result){{else if eq $expr_obj.Type "jmes"}}result, err = {{$.OrigSpec.Name}}_eval_{{$expr_obj.Srno}}.Search(var_map){{else if eq $expr_obj.Type "jngo"}}var t_result string
+	t_result, err = {{$.OrigSpec.Name}}_eval_{{$expr_obj.Srno}}.Execute(pongo2.Context(*var_map))
+	if err != nil {
+		result = nil
+		return
+	}
+	err = json.Unmarshal([]byte(t_result), &result){{end}}
 	if err == nil {
 		result = resolvePointers(result)
 	}

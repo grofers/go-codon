@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"gopkg.in/yaml.v2"
 	jmespath "github.com/jmespath/go-jmespath"
+	pongo2 "github.com/flosch/pongo2"
 	shared "github.com/grofers/go-codon/shared"
 )
 
@@ -28,7 +29,7 @@ type Spec struct {
 	Start		[]string						`yaml:"start"`
 	Tasks		map[string]Task					`yaml:"tasks"`
 	Output		interface{}						`yaml:"output"`
-	ErrorOutput	map[string]string				`yaml:"output-on-error"`
+	ErrorOutput	interface{}						`yaml:"output-on-error"`
 	References	map[string]map[string]string	`yaml:"references"`
 }
 
@@ -266,6 +267,22 @@ func (s *Spec) getExpressionMap() (map[string]Expression, error) {
 		all_exprs[expr] = expr_obj
 	}
 
+	exprs = make([]string, 0)
+	exprs = extractExpressionsFromMap(s.ErrorOutput, exprs)
+	for _, expr := range exprs {
+		if _, ok := all_exprs[expr]; ok {
+			continue
+		}
+		expr_obj, err := s.processExpression(expr)
+		if err != nil {
+			log.Println("Unable to process expression:", expr)
+			return nil, err
+		}
+		expr_obj.Srno = counter
+		counter++
+		all_exprs[expr] = expr_obj
+	}
+
 	return all_exprs, nil
 }
 
@@ -325,16 +342,21 @@ func (s *Spec) processExpression(expr string) (Expression, error) {
 			ret_expr.Type = "yaql"
 		}
 		switch ret_expr.Type {
+		// Just testing compile
 		case "jmes":
-			// Just testing compile
 			_, err := jmespath.Compile(ret_expr.Raw)
 			if err != nil {
 				return Expression{}, err
 			}
-			return ret_expr, nil
+		case "jngo":
+			_, err := pongo2.FromString(ret_expr.Raw)
+			if err != nil {
+				return Expression{}, err
+			}
 		default:
 			return Expression{}, fmt.Errorf("Expression of this type is not supported: %v", expr)
 		}
+		return ret_expr, nil
 	} else {
 		ret_expr.Type = "json"
 		ret_expr.Raw = expr

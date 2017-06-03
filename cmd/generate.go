@@ -15,6 +15,7 @@
 package cmd
 
 import (
+	"os"
 	"log"
 	"github.com/spf13/cobra"
 
@@ -34,7 +35,7 @@ working directory must be your project directory.`,
 			log.Println("Generate successful")
 		} else {
 			log.Println("Generate failed")
-			// TODO: Exit with -1
+			os.Exit(1)
 		}
 	},
 }

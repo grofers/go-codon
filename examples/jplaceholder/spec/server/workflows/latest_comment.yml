@@ -15,7 +15,7 @@ tasks:
     get_comments:
       action: clients.jplaceholder.get_comments
       input:
-          postId: <%jmes main.latest_post.id %>
+          postId: <%jngo {{ main.latest_post.id }} %>
       publish:
           latest_comment: <%jmes action.max_by([], &id) %>
 

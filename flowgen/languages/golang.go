@@ -46,6 +46,7 @@ func (g GoGenerator) getOutputObj(output interface{}) OutputObj {
 
 func (g *GoGenerator) postProcess() error {
 	g.Data.LanguageSpec["OutputObj"] = g.getOutputObj(g.Data.OrigSpec.Output)
+	g.Data.LanguageSpec["ErrorOutputObj"] = g.getOutputObj(g.Data.OrigSpec.ErrorOutput)
 
 	if _, ok := g.Data.OrigSpec.References["go"]; !ok {
 		g.Data.OrigSpec.References["go"] = make(map[string]string)
@@ -68,6 +69,8 @@ func (g *GoGenerator) postProcess() error {
 			g.Data.OrigSpec.References["go"]["json"] = "encoding/json"
 		case "jmes":
 			g.Data.OrigSpec.References["go"]["jmespath"] = "github.com/jmespath/go-jmespath"
+		case "jngo":
+			g.Data.OrigSpec.References["go"]["pongo2"] = "github.com/flosch/pongo2"
 		}
 	}
 
