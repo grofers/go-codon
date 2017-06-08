@@ -4,7 +4,6 @@ import (
 	"log"
 	"fmt"
 	"strings"
-	"reflect"
 	"encoding/json"
 	"regexp"
 	"io/ioutil"
@@ -55,9 +54,9 @@ type Task struct {
 type LoopInfo struct {
 	TaskName			string				`yaml:"task"`
 	Input				map[string]string	`yaml:"input"`
-	Publish				map[string]string	`yaml:"publish"`
+	Publish				interface{}			`yaml:"publish"`
 	PublishList			[]PublishObj		`yaml:"-"`
-	ErrorPublish		map[string]string	`yaml:"publish-on-error"`
+	ErrorPublish		interface{}			`yaml:"publish-on-error"`
 	ErrorPublishList	[]PublishObj		`yaml:"-"`
 }
 
@@ -430,39 +429,31 @@ func createPublishList(map_list interface{}) ([]PublishObj, error) {
 	}
 
 	counter := 1
-	// Using reflect
-	map_list_val := reflect.ValueOf(map_list)
-	switch map_list_val.Kind() {
-	case reflect.Map:
-		retlist := make([]PublishObj, map_list_val.Len())
-		for _, map_key_val := range map_list_val.MapKeys() {
-			ct := map_key_val.Interface().(string)
-			ce := map_list_val.MapIndex(map_key_val).Interface().(string)
+	switch map_list_v := map_list.(type) {
+	case map[interface{}]interface{}:
+		retlist := make([]PublishObj, len(map_list_v))
+		for ct, ce := range map_list_v {
 			retlist[counter-1] = PublishObj{
 				Srno: counter,
-				VariableName: ct,
-				ExpressionName: ce,
+				VariableName: ct.(string),
+				ExpressionName: ce.(string),
 			}
 			counter++
 		}
 		return retlist, nil
-	case reflect.Array, reflect.Slice:
-		retlist := make([]PublishObj, map_list_val.Len())
-		for i := 0; i < map_list_val.Len(); i++ {
-			task_map_val := map_list_val.Index(i)
-			if task_map_val.Len() != 1 {
-				return nil, fmt.Errorf("Each entry in todo must have only one key-value pair: %v", map_list)
+	case []interface{}:
+	// case []map[interface{}]interface{}:
+		retlist := make([]PublishObj, len(map_list_v))
+		for _, task_map_i := range map_list_v {
+			task_map := task_map_i.(map[interface{}]interface{})
+			if len(task_map) != 1 {
+				return nil, fmt.Errorf("Each entry in todo must have only one key-value pair: %v", map_list_v)
 			}
-			if task_map_val.Kind() != reflect.Map {
-				return nil, fmt.Errorf("Publish list must be a list of variables: %v, Type: %T", map_list, map_list)
-			}
-			for _, map_key_val := range task_map_val.MapKeys() {
-				ct := map_key_val.Interface().(string)
-				ce := task_map_val.MapIndex(map_key_val).Interface().(string)
+			for ct, ce := range task_map {
 				retlist[counter-1] = PublishObj{
 					Srno: counter,
-					VariableName: ct,
-					ExpressionName: ce,
+					VariableName: ct.(string),
+					ExpressionName: ce.(string),
 				}
 				counter++
 				break
