@@ -4,6 +4,7 @@ import (
 	"log"
 	"fmt"
 	"strings"
+	"reflect"
 	"encoding/json"
 	"regexp"
 	"io/ioutil"
@@ -34,30 +35,40 @@ type Spec struct {
 }
 
 type Task struct {
-	Action			string						`yaml:"action"`
-	Input			map[string]string			`yaml:"input"`
-	Publish			map[string]string			`yaml:"publish"`
-	ErrorPublish	map[string]string			`yaml:"publish-on-error"`
-	OnError			[]map[string]string			`yaml:"on-error"`
-	OnErrorList		[]TodoObj					`yaml:"-"`
-	OnSuccess		[]map[string]string			`yaml:"on-success"`
-	OnSuccessList	[]TodoObj					`yaml:"-"`
-	OnComplete		[]map[string]string			`yaml:"on-complete"`
-	OnCompleteList	[]TodoObj					`yaml:"-"`
-	Timeout			int64						`yaml:"timeout"`
-	WithItems		string						`yaml:"with-items"`
-	Loop			LoopInfo					`yaml:"loop"`
+	Action				string					`yaml:"action"`
+	Input				map[string]string		`yaml:"input"`
+	Publish				interface{}				`yaml:"publish"`
+	PublishList			[]PublishObj			`yaml:"-"`
+	ErrorPublish		interface{}				`yaml:"publish-on-error"`
+	ErrorPublishList	[]PublishObj			`yaml:"-"`
+	OnError				[]map[string]string		`yaml:"on-error"`
+	OnErrorList			[]TodoObj				`yaml:"-"`
+	OnSuccess			[]map[string]string		`yaml:"on-success"`
+	OnSuccessList		[]TodoObj				`yaml:"-"`
+	OnComplete			[]map[string]string		`yaml:"on-complete"`
+	OnCompleteList		[]TodoObj				`yaml:"-"`
+	Timeout				int64					`yaml:"timeout"`
+	WithItems			string					`yaml:"with-items"`
+	Loop				LoopInfo				`yaml:"loop"`
 }
 
 type LoopInfo struct {
-	TaskName		string				`yaml:"task"`
-	Input			map[string]string	`yaml:"input"`
-	Publish			map[string]string	`yaml:"publish"`
-	ErrorPublish	map[string]string	`yaml:"publish-on-error"`
+	TaskName			string				`yaml:"task"`
+	Input				map[string]string	`yaml:"input"`
+	Publish				map[string]string	`yaml:"publish"`
+	PublishList			[]PublishObj		`yaml:"-"`
+	ErrorPublish		map[string]string	`yaml:"publish-on-error"`
+	ErrorPublishList	[]PublishObj		`yaml:"-"`
 }
 
 type TodoObj struct {
 	TaskName		string
+	ExpressionName	string
+	Srno			int
+}
+
+type PublishObj struct {
+	VariableName	string
 	ExpressionName	string
 	Srno			int
 }
@@ -99,6 +110,11 @@ func (s *Spec) Process() (PostSpec, error) {
 	}
 	ps.LanguageSpec = make(map[string]interface{})
 
+	err = s.setLists()
+	if err != nil {
+		return PostSpec {}, err
+	}
+
 	ps.ExpressionMap, err = s.getExpressionMap()
 	if err != nil {
 		return PostSpec {}, err
@@ -109,15 +125,10 @@ func (s *Spec) Process() (PostSpec, error) {
 		return PostSpec {}, err
 	}
 
-	err = s.setTodoLists()
-	if err != nil {
-		return PostSpec {}, err
-	}
-
 	return ps, nil
 }
 
-func (s *Spec) setTodoLists() error {
+func (s *Spec) setLists() error {
 	var err error
 	for task_name, _ := range s.Tasks {
 		task_obj := s.Tasks[task_name]
@@ -132,6 +143,24 @@ func (s *Spec) setTodoLists() error {
 		task_obj.OnCompleteList, err = task_obj.getOnCompleteList()
 		if err != nil {
 			return err
+		}
+		task_obj.PublishList, err = task_obj.getPublishList()
+		if err != nil {
+			return err
+		}
+		task_obj.ErrorPublishList, err = task_obj.getErrorPublishList()
+		if err != nil {
+			return err
+		}
+		if task_obj.WithItems != "" {
+			task_obj.Loop.PublishList, err = task_obj.Loop.getPublishList()
+			if err != nil {
+				return err
+			}
+			task_obj.Loop.ErrorPublishList, err = task_obj.Loop.getErrorPublishList()
+			if err != nil {
+				return err
+			}
 		}
 		s.Tasks[task_name] = task_obj
 	}
@@ -179,46 +208,36 @@ func (s *Spec) getExpressionMap() (map[string]Expression, error) {
 				return nil, err
 			}
 		}
-		for _, expr := range task.Publish {
+		for _, publish_obj := range task.PublishList {
+			expr := publish_obj.ExpressionName
 			err := s.appendExpression(all_exprs, &expr, &counter)
 			if err != nil {
 				return nil, err
 			}
 		}
-		for _, expr := range task.ErrorPublish {
+		for _, publish_obj := range task.ErrorPublishList {
+			expr := publish_obj.ExpressionName
 			err := s.appendExpression(all_exprs, &expr, &counter)
 			if err != nil {
 				return nil, err
 			}
 		}
-		for _, error_map := range task.OnError {
-			if len(error_map) != 1 {
-				return nil, fmt.Errorf("Each entry in on-error must have only one key-value pair: %v", task.OnError)
-			}
-			var expr string
-			for _, ce := range error_map {expr = ce;break;}
+		for _, task_obj := range task.OnErrorList {
+			expr := task_obj.ExpressionName
 			err := s.appendExpression(all_exprs, &expr, &counter)
 			if err != nil {
 				return nil, err
 			}
 		}
-		for _, success_map := range task.OnSuccess {
-			if len(success_map) != 1 {
-				return nil, fmt.Errorf("Each entry in on-error must have only one key-value pair: %v", task.OnError)
-			}
-			var expr string
-			for _, ce := range success_map {expr = ce;break;}
+		for _, task_obj := range task.OnSuccessList {
+			expr := task_obj.ExpressionName
 			err := s.appendExpression(all_exprs, &expr, &counter)
 			if err != nil {
 				return nil, err
 			}
 		}
-		for _, complete_map := range task.OnComplete {
-			if len(complete_map) != 1 {
-				return nil, fmt.Errorf("Each entry in on-error must have only one key-value pair: %v", task.OnError)
-			}
-			var expr string
-			for _, ce := range complete_map {expr = ce;break;}
+		for _, task_obj := range task.OnCompleteList {
+			expr := task_obj.ExpressionName
 			err := s.appendExpression(all_exprs, &expr, &counter)
 			if err != nil {
 				return nil, err
@@ -236,13 +255,15 @@ func (s *Spec) getExpressionMap() (map[string]Expression, error) {
 					return nil, err
 				}
 			}
-			for _, expr := range task.Loop.Publish {
+			for _, task_obj := range task.Loop.PublishList {
+				expr := task_obj.ExpressionName
 				err := s.appendExpression(all_exprs, &expr, &counter)
 				if err != nil {
 					return nil, err
 				}
 			}
-			for _, expr := range task.Loop.ErrorPublish {
+			for _, task_obj := range task.Loop.ErrorPublishList {
+				expr := task_obj.ExpressionName
 				err := s.appendExpression(all_exprs, &expr, &counter)
 				if err != nil {
 					return nil, err
@@ -330,6 +351,26 @@ func (t Task) getOnCompleteList() (todo_list []TodoObj, err error) {
 	return
 }
 
+func (t Task) getPublishList() (publish_list []PublishObj, err error) {
+	publish_list, err = createPublishList(t.Publish)
+	return
+}
+
+func (t Task) getErrorPublishList() (publish_list []PublishObj, err error) {
+	publish_list, err = createPublishList(t.ErrorPublish)
+	return
+}
+
+func (t LoopInfo) getPublishList() (publish_list []PublishObj, err error) {
+	publish_list, err = createPublishList(t.Publish)
+	return
+}
+
+func (t LoopInfo) getErrorPublishList() (publish_list []PublishObj, err error) {
+	publish_list, err = createPublishList(t.ErrorPublish)
+	return
+}
+
 var expr_regex = regexp.MustCompile("<%(?P<type>[^ ]*) (?P<expr>[^ ].*) %>")
 
 func (s *Spec) processExpression(expr string) (Expression, error) {
@@ -381,6 +422,56 @@ func processAction(action string) (Action, error) {
 	ret_action.Raw = action
 
 	return ret_action, nil
+}
+
+func createPublishList(map_list interface{}) ([]PublishObj, error) {
+	if map_list == nil {
+		return []PublishObj {}, nil
+	}
+
+	counter := 1
+	// Using reflect
+	map_list_val := reflect.ValueOf(map_list)
+	switch map_list_val.Kind() {
+	case reflect.Map:
+		retlist := make([]PublishObj, map_list_val.Len())
+		for _, map_key_val := range map_list_val.MapKeys() {
+			ct := map_key_val.Interface().(string)
+			ce := map_list_val.MapIndex(map_key_val).Interface().(string)
+			retlist[counter-1] = PublishObj{
+				Srno: counter,
+				VariableName: ct,
+				ExpressionName: ce,
+			}
+			counter++
+		}
+		return retlist, nil
+	case reflect.Array, reflect.Slice:
+		retlist := make([]PublishObj, map_list_val.Len())
+		for i := 0; i < map_list_val.Len(); i++ {
+			task_map_val := map_list_val.Index(i)
+			if task_map_val.Len() != 1 {
+				return nil, fmt.Errorf("Each entry in todo must have only one key-value pair: %v", map_list)
+			}
+			if task_map_val.Kind() != reflect.Map {
+				return nil, fmt.Errorf("Publish list must be a list of variables: %v, Type: %T", map_list, map_list)
+			}
+			for _, map_key_val := range task_map_val.MapKeys() {
+				ct := map_key_val.Interface().(string)
+				ce := task_map_val.MapIndex(map_key_val).Interface().(string)
+				retlist[counter-1] = PublishObj{
+					Srno: counter,
+					VariableName: ct,
+					ExpressionName: ce,
+				}
+				counter++
+				break
+			}
+		}
+		return retlist, nil
+	default:
+		return nil, fmt.Errorf("Publish list must be a list of variables: %v, Type: %T", map_list, map_list)
+	}
 }
 
 func createTodoList(map_list []map[string]string) ([]TodoObj, error) {
