@@ -86,8 +86,8 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map *map[string]interfa
 		log.Println("[WARN] Failed to get response from {{ (index $.ActionMap $element.Action).Pascalized }} API: ", resp, " Err: ", err, " Args: ", arg_map)
 		defer var_map_mutex.Unlock()
 		var_map_mutex.Lock()
-		{{range $index2, $element2 := $element.ErrorPublish}}
-		(*var_map)["{{$index2}}"], _ = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2).Srno }}(&expr_map)
+		{{range $index2, $element2 := $element.ErrorPublishList}}
+		(*var_map)["{{$element2.VariableName}}"], _ = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(&expr_map)
 		{{end}}
 		return err
 	}
@@ -98,8 +98,8 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map *map[string]interfa
 	if err != nil {
 		defer var_map_mutex.Unlock()
 		var_map_mutex.Lock()
-		{{range $index2, $element2 := $element.ErrorPublish}}
-		(*var_map)["{{$index2}}"], _ = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2).Srno }}(&expr_map)
+		{{range $index2, $element2 := $element.ErrorPublishList}}
+		(*var_map)["{{$element2.VariableName}}"], _ = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(&expr_map)
 		{{end}}
 		return err
 	}
@@ -159,24 +159,24 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map *map[string]interfa
 	func() {
 		defer var_map_mutex.Unlock()
 		var_map_mutex.Lock()
-		{{range $index2, $element2 := $element.Loop.Publish}}
-		(*var_map)["{{$index2}}"] = []interface{}{}
+		{{range $index2, $element2 := $element.Loop.PublishList}}
+		(*var_map)["{{$element2.VariableName}}"] = []interface{}{}
 		{{end}}
 		for index, element := range iterlist {
 			expr_map["item"] = element
 			expr_map["task"] = var_maps[index]
-			{{range $index2, $element2 := $element.Loop.Publish}}
-			(*var_map)["{{$index2}}"] = append((*var_map)["{{$index2}}"].([]interface{}), maybe({{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2).Srno }}(&expr_map)))
+			{{range $index2, $element2 := $element.Loop.PublishList}}
+			(*var_map)["{{$element2.VariableName}}"] = append((*var_map)["{{$element2.VariableName}}"].([]interface{}), maybe({{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(&expr_map)))
 			{{end}}
 		}
 	}()
 	{{end}}
-	{{if gt (len $element.Publish) 0}}
+	{{if gt (len $element.PublishList) 0}}
 	func() {
 		defer var_map_mutex.Unlock()
 		var_map_mutex.Lock()
-		{{range $index2, $element2 := $element.Publish}}
-		(*var_map)["{{$index2}}"], _ = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2).Srno }}(&expr_map)
+		{{range $index2, $element2 := $element.PublishList}}
+		(*var_map)["{{$element2.VariableName}}"], _ = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(&expr_map)
 		{{end}}
 	}()
 	{{end}}
