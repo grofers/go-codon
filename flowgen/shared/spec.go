@@ -11,6 +11,7 @@ import (
 	jmespath "github.com/jmespath/go-jmespath"
 	pongo2 "github.com/flosch/pongo2"
 	shared "github.com/grofers/go-codon/shared"
+	conv "github.com/cstockton/go-conv"
 )
 
 type PostSpec struct {
@@ -432,28 +433,35 @@ func createPublishList(map_list interface{}) ([]PublishObj, error) {
 	switch map_list_v := map_list.(type) {
 	case map[interface{}]interface{}:
 		retlist := make([]PublishObj, len(map_list_v))
-		for ct, ce := range map_list_v {
+		for ct, ce_i := range map_list_v {
+			ce, err := conv.String(ce_i)
+			if err != nil {
+				return nil, fmt.Errorf("Invalid expression value in publis list: %v", map_list_v)
+			}
 			retlist[counter-1] = PublishObj{
 				Srno: counter,
 				VariableName: ct.(string),
-				ExpressionName: ce.(string),
+				ExpressionName: ce,
 			}
 			counter++
 		}
 		return retlist, nil
 	case []interface{}:
-	// case []map[interface{}]interface{}:
 		retlist := make([]PublishObj, len(map_list_v))
 		for _, task_map_i := range map_list_v {
 			task_map := task_map_i.(map[interface{}]interface{})
 			if len(task_map) != 1 {
 				return nil, fmt.Errorf("Each entry in todo must have only one key-value pair: %v", map_list_v)
 			}
-			for ct, ce := range task_map {
+			for ct, ce_i := range task_map {
+				ce, err := conv.String(ce_i)
+				if err != nil {
+					return nil, fmt.Errorf("Invalid expression value in publis list: %v", map_list_v)
+				}
 				retlist[counter-1] = PublishObj{
 					Srno: counter,
 					VariableName: ct.(string),
-					ExpressionName: ce.(string),
+					ExpressionName: ce,
 				}
 				counter++
 				break
