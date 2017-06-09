@@ -37,9 +37,11 @@ type Spec struct {
 type Task struct {
 	Action				string					`yaml:"action"`
 	Input				map[string]string		`yaml:"input"`
-	Publish				interface{}				`yaml:"publish"`
+	PublishRaw			interface{}				`yaml:"publish"`
+	Publish				map[string]string		`yaml:"-"`
 	PublishList			[]PublishObj			`yaml:"-"`
-	ErrorPublish		interface{}				`yaml:"publish-on-error"`
+	ErrorPublishRaw		interface{}				`yaml:"publish-on-error"`
+	ErrorPublish		map[string]string		`yaml:"-"`
 	ErrorPublishList	[]PublishObj			`yaml:"-"`
 	OnError				[]map[string]string		`yaml:"on-error"`
 	OnErrorList			[]TodoObj				`yaml:"-"`
@@ -55,9 +57,11 @@ type Task struct {
 type LoopInfo struct {
 	TaskName			string				`yaml:"task"`
 	Input				map[string]string	`yaml:"input"`
-	Publish				interface{}			`yaml:"publish"`
+	PublishRaw			interface{}			`yaml:"publish"`
+	Publish				map[string]string	`yaml:"-"`
 	PublishList			[]PublishObj		`yaml:"-"`
-	ErrorPublish		interface{}			`yaml:"publish-on-error"`
+	ErrorPublishRaw		interface{}			`yaml:"publish-on-error"`
+	ErrorPublish		map[string]string	`yaml:"-"`
 	ErrorPublishList	[]PublishObj		`yaml:"-"`
 }
 
@@ -148,19 +152,23 @@ func (s *Spec) setLists() error {
 		if err != nil {
 			return err
 		}
+		task_obj.Publish = task_obj.tryPublishMap()
 		task_obj.ErrorPublishList, err = task_obj.getErrorPublishList()
 		if err != nil {
 			return err
 		}
+		task_obj.ErrorPublish = task_obj.tryErrorPublishMap()
 		if task_obj.WithItems != "" {
 			task_obj.Loop.PublishList, err = task_obj.Loop.getPublishList()
 			if err != nil {
 				return err
 			}
+			task_obj.Loop.Publish = task_obj.Loop.tryPublishMap()
 			task_obj.Loop.ErrorPublishList, err = task_obj.Loop.getErrorPublishList()
 			if err != nil {
 				return err
 			}
+			task_obj.Loop.ErrorPublish = task_obj.Loop.tryErrorPublishMap()
 		}
 		s.Tasks[task_name] = task_obj
 	}
@@ -352,22 +360,42 @@ func (t Task) getOnCompleteList() (todo_list []TodoObj, err error) {
 }
 
 func (t Task) getPublishList() (publish_list []PublishObj, err error) {
-	publish_list, err = createPublishList(t.Publish)
+	publish_list, err = createPublishList(t.PublishRaw)
+	return
+}
+
+func (t Task) tryPublishMap() (publish_map map[string]string) {
+	publish_map = createPublishMap(t.PublishList)
 	return
 }
 
 func (t Task) getErrorPublishList() (publish_list []PublishObj, err error) {
-	publish_list, err = createPublishList(t.ErrorPublish)
+	publish_list, err = createPublishList(t.ErrorPublishRaw)
+	return
+}
+
+func (t Task) tryErrorPublishMap() (publish_map map[string]string) {
+	publish_map = createPublishMap(t.ErrorPublishList)
 	return
 }
 
 func (t LoopInfo) getPublishList() (publish_list []PublishObj, err error) {
-	publish_list, err = createPublishList(t.Publish)
+	publish_list, err = createPublishList(t.PublishRaw)
+	return
+}
+
+func (t LoopInfo) tryPublishMap() (publish_map map[string]string) {
+	publish_map = createPublishMap(t.PublishList)
 	return
 }
 
 func (t LoopInfo) getErrorPublishList() (publish_list []PublishObj, err error) {
-	publish_list, err = createPublishList(t.ErrorPublish)
+	publish_list, err = createPublishList(t.ErrorPublishRaw)
+	return
+}
+
+func (t LoopInfo) tryErrorPublishMap() (publish_map map[string]string) {
+	publish_map = createPublishMap(t.ErrorPublishList)
 	return
 }
 
@@ -422,6 +450,14 @@ func processAction(action string) (Action, error) {
 	ret_action.Raw = action
 
 	return ret_action, nil
+}
+
+func createPublishMap(publish_list []PublishObj) map[string]string {
+	publish_map := make(map[string]string)
+	for _, publish_obj := range publish_list {
+		publish_map[publish_obj.VariableName] = publish_obj.ExpressionName
+	}
+	return publish_map
 }
 
 func createPublishList(map_list interface{}) ([]PublishObj, error) {
