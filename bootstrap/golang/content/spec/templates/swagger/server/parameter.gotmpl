@@ -150,7 +150,7 @@ func ({{ .ReceiverName }} *{{ pascalize .Name }}Params) BindRequest(r *http.Requ
   if err != nil {
     res = append(res, errors.New(400, "reading file %q failed: %v", {{ printf "%q" (camelize .Name) }}, err))
   } else {
-    {{ .ReceiverName }}.{{ pascalize .Name }} = runtime.File{Data: {{ camelize .Name }}, Header: {{ camelize .Name }}Header}
+    {{ .ReceiverName }}.Params["{{ .Name }}"] = runtime.File{Data: {{ camelize .Name }}, Header: {{ camelize .Name }}Header}
   }
   {{ else }}fd{{ pascalize .Name }}, fdhk{{ pascalize .Name }}, _ := fds.GetOK({{ .Path }})
   if err := {{ .ReceiverName }}.bind{{ pascalize .ID }}(fd{{ pascalize .Name }}, fdhk{{ pascalize .Name }}, route.Formats); err != nil {
@@ -168,7 +168,7 @@ func ({{ .ReceiverName }} *{{ pascalize .Name }}Params) BindRequest(r *http.Requ
   {{ end }}{{ end }}
 
   {{ if and .IsBodyParam .Schema }}if runtime.HasBody(r) {
-  {{ if .Schema.IsStream }}{{ .ReceiverName }}.{{ pascalize .Name }} = r.Body
+  {{ if .Schema.IsStream }}{{ .ReceiverName }}.Params["{{ .Name }}"] = r.Body
   {{ else }}defer r.Body.Close()
   {{ if and .Schema.IsBaseType .Schema.IsExported }}body, err := {{ .ModelsPackage }}.Unmarshal{{ stripPackage .GoType .ModelsPackage }}{{ if .IsArray }}Slice{{ end }}(r.Body, route.Consumer)
   if err != nil { {{ if .Required }}
@@ -185,7 +185,7 @@ func ({{ .ReceiverName }} *{{ pascalize .Name }}Params) BindRequest(r *http.Requ
     }
     {{ end }}
   {{ end }}} else {
-    {{ if .IsArray }}{{ if .Child }}{{ if (and (not .Schema.IsInterface) (or .Child.IsAliased .Child.IsComplexObject)) }}for _, {{ .IndexVar }}{{ .ReceiverName }} := range {{ .ReceiverName }}.{{ pascalize .Name }} {
+    {{ if .IsArray }}{{ if .Child }}{{ if (and (not .Schema.IsInterface) (or .Child.IsAliased .Child.IsComplexObject)) }}for _, {{ .IndexVar }}{{ .ReceiverName }} := range {{ .ReceiverName }}.Params["{{ .Name }}"] {
       if err := {{ .IndexVar }}{{ .ReceiverName }}.Validate(route.Formats); err != nil {
         res = append(res, err)
         break
@@ -196,7 +196,7 @@ func ({{ .ReceiverName }} *{{ pascalize .Name }}Params) BindRequest(r *http.Requ
     }
     {{ end }}
     if len(res) == 0 {
-      {{ .ReceiverName }}.{{ pascalize .Name }} = {{ if and (not .Schema.IsBaseType) .IsNullable }}&{{ end }}body
+      {{ .ReceiverName }}.Params["{{ .Name }}"] = {{ if and (not .Schema.IsBaseType) .IsNullable }}&{{ end }}body
     }
   }
   {{ end }}
