@@ -111,7 +111,6 @@ type {{ pascalize .Name }}Params struct {
 
 // GetParamsMap returns the parameters in a map format with original names
 // as keys.
-// TODO: Use a map to store the params instead of a struct. Or use mapstructure.
 func ({{ .ReceiverName }} *{{ pascalize .Name }}Params) GetParamsMap() (map[string]interface{}, error) {
   return o.Params, nil
 }
