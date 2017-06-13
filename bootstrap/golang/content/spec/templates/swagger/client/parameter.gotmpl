@@ -16,7 +16,7 @@ import (
   cr "github.com/go-openapi/runtime/client"
 
   strfmt "github.com/go-openapi/strfmt"
-  mapstructure "github.com/mitchellh/mapstructure"
+  codon_ms "github.com/grofers/go-codon/runtime/mapstructure"
 
   {{ range .DefaultImports }}{{ printf "%q" .}}
   {{ end }}
@@ -81,7 +81,7 @@ func New{{ pascalize .Name }}ParamsWithHTTPClient(client *http.Client) *{{ pasca
 
 func New{{ pascalize .Name }}ParamsFromMap(params *map[string]interface{}) (*{{ pascalize .Name }}Params, error) {
   retParams := New{{ pascalize .Name }}Params()
-  err := mapstructure.WeakDecode(params, &retParams)
+  err := codon_ms.Decode(params, &retParams)
   if err != nil {
     return nil, err
   }
@@ -97,12 +97,12 @@ type {{ pascalize .Name }}Params struct {
   {{ .Description }}
 
   {{ end }}*/
-  {{ pascalize .ID }} {{ if and (not .IsArray) (not .IsMap) (not .HasDiscriminator) (not .IsInterface) (not .IsStream) (or .IsNullable  ) }}*{{ end }}{{ if not .IsFileParam }}{{ .GoType }}{{ else }}os.File{{end}} `mapstructure:{{.Path}}`
+  {{ pascalize .ID }} {{ if and (not .IsArray) (not .IsMap) (not .HasDiscriminator) (not .IsInterface) (not .IsStream) (or .IsNullable  ) }}*{{ end }}{{ if not .IsFileParam }}{{ .GoType }}{{ else }}os.File{{end}} `json:{{.Path}}`
   {{ end }}
 
-  {{ camelize .TimeoutName }} time.Duration `mapstructure:"_timeout"`
-  Context context.Context `mapstructure:"-"`
-  HTTPClient *http.Client `mapstructure:"-"`
+  {{ camelize .TimeoutName }} time.Duration `json:"_timeout"`
+  Context context.Context `json:"-"`
+  HTTPClient *http.Client `json:"-"`
 }
 
 // With{{ pascalize .TimeoutName }} adds the timeout to the {{ humanize .Name }} params

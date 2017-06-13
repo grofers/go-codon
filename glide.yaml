@@ -13,3 +13,4 @@ import:
 - package: github.com/spf13/viper
 - package: gopkg.in/yaml.v2
 - package: github.com/cstockton/go-conv
+- package: github.com/mitchellh/mapstructure
