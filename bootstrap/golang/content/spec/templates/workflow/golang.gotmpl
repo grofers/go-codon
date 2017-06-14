@@ -216,13 +216,13 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map *map[string]interfa
 	}
 	{{end}}
 	wg.Wait()
+	{{end}}
 	{{range $index2, $element2 := $element.OnCompleteList}}
 	oncexpr{{$element2.Srno}}, e{{$element2.Srno}} := {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(&expr_map){{end}}
 	{{range $index2, $element2 := $element.OnCompleteList}}
 	if e{{$element2.Srno}} == nil && oncexpr{{$element2.Srno}}.(bool) {
 		{{printf "task_%s__%s" $.OrigSpec.Name $element2.TaskName}}(var_map, var_map_mutex)
 	}
-	{{end}}
 	{{end}}
 	return nil
 }
