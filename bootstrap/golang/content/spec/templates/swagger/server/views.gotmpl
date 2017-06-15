@@ -36,7 +36,8 @@ func configureViews(api *{{.Package}}.{{ pascalize .Name }}API) {
     switch status_code {
     {{ range .Responses }}case {{.Code}}:
       return &operations.{{ pascalize .Name }}{
-        Payload: resp["body"],
+        {{ if .Schema }}Payload: resp["body"],
+        {{ end }}
       }
     {{ end }}default:
       {{ if .FailResponse }}return &operations.{{ pascalize .FailResponse.Name }}{
