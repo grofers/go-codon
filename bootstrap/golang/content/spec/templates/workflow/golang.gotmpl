@@ -70,6 +70,7 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map *map[string]interfa
 	expr_map["constants"] = config.YmlConfig.Constants
 
 	var err error
+	is_error := false
 
 	{{ if $element.Action }}
 	arg_map := make(map[string]interface{})
@@ -130,7 +131,9 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map *map[string]interfa
 		for _, element := range iterlist {
 			expr_map["item"] = element
 			new_var_map := make(map[string]interface{})
+			var nil_err error
 			var err_obj *error
+			err_obj = &nil_err
 			new_var_map_mutex := &sync.RWMutex{}
 			{{if gt (len $element.Loop.Input) 0}}
 			func() {
@@ -152,6 +155,7 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map *map[string]interfa
 					}
 					if terr != nil {
 						(*err_obj) = terr
+						is_error = true
 						err = terr
 					}
 					wg.Done()
@@ -169,10 +173,9 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map *map[string]interfa
 	}
 	{{ end }}
 
-	is_error := false
-	{{ if or $element.Action $element.WithItems }}
+	{{ if $element.Action }}
 	if err != nil {
-		{{ if $element.Action }}log.Println("[WARN] Failed to get response from {{ (index $.ActionMap $element.Action).Pascalized }} API: ", resp, " Err: ", err, " Args: ", arg_map){{ end }}
+		log.Println("[WARN] Failed to get response from {{ (index $.ActionMap $element.Action).Pascalized }} API: ", resp, " Err: ", err, " Args: ", arg_map)
 		is_error = true
 		err_val := reflect.ValueOf(err)
 		if err_val.Kind() == reflect.Struct {
@@ -183,6 +186,10 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map *map[string]interfa
 		} else {
 			expr_map["action_exception"] = err
 		}
+	}
+	{{ else if $element.WithItems }}
+	if err != nil {
+		is_error = true
 	}
 	{{ end }}
 
@@ -196,7 +203,6 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map *map[string]interfa
 		{{end}}
 		for index, element := range iterlist {
 			expr_map["item"] = element
-			expr_map["task"] = var_maps[index]
 			if err_objs[index] != nil {
 				err_val := reflect.ValueOf(err_objs[index])
 				if err_val.Kind() == reflect.Struct {
@@ -225,15 +231,7 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map *map[string]interfa
 			expr_map["item"] = element
 			expr_map["task"] = var_maps[index]
 			if err_objs[index] != nil {
-				err_val := reflect.ValueOf(err_objs[index])
-				if err_val.Kind() == reflect.Struct {
-					err_payload := err_val.FieldByName("Payload")
-					if err_payload.IsValid() {
-						expr_map["task"] = err_payload.Interface()
-					}
-				} else {
-					expr_map["task_exception"] = err_objs[index]
-				}
+				expr_map["task"] = nil
 			}
 			{{range $index2, $element2 := $element.Loop.PublishList}}
 			(*var_map)["{{$element2.VariableName}}"] = append((*var_map)["{{$element2.VariableName}}"].([]interface{}), maybe({{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(&expr_map)))
