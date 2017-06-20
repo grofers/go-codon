@@ -1,0 +1,19 @@
+swagger: '2.0'
+info:
+  title: Codon flowgen compliance test
+  version: "1.0.0"
+basePath: /
+produces:
+  - application/json
+paths:
+  /direct:
+    get:
+      x-workflow: get_health
+      responses:
+        200:
+          description: Feed from API Response
+          schema:
+            $ref: '#/definitions/ObjectResponse'
+definitions:
+  ObjectResponse:
+    type: object
