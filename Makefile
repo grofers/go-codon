@@ -22,4 +22,9 @@ iinstall:
 
 install: clean installdependencies igenerate iinstall
 
+itest:
+	./scripts/tests.sh
+
+test: install itest
+
 .PHONY: installdependencies clean

@@ -43,6 +43,9 @@ type Task struct {
 	ErrorPublishRaw		interface{}				`yaml:"publish-on-error"`
 	ErrorPublish		map[string]string		`yaml:"-"`
 	ErrorPublishList	[]PublishObj			`yaml:"-"`
+	CompletePublishRaw	interface{}				`yaml:"publish-on-complete"`
+	CompletePublish		map[string]string		`yaml:"-"`
+	CompletePublishList	[]PublishObj			`yaml:"-"`
 	OnError				[]map[string]string		`yaml:"on-error"`
 	OnErrorList			[]TodoObj				`yaml:"-"`
 	OnSuccess			[]map[string]string		`yaml:"on-success"`
@@ -158,6 +161,11 @@ func (s *Spec) setLists() error {
 			return err
 		}
 		task_obj.ErrorPublish = task_obj.tryErrorPublishMap()
+		task_obj.CompletePublishList, err = task_obj.getCompletePublishList()
+		if err != nil {
+			return err
+		}
+		task_obj.CompletePublish = task_obj.tryCompletePublishMap()
 		if task_obj.WithItems != "" {
 			task_obj.Loop.PublishList, err = task_obj.Loop.getPublishList()
 			if err != nil {
@@ -224,6 +232,13 @@ func (s *Spec) getExpressionMap() (map[string]Expression, error) {
 			}
 		}
 		for _, publish_obj := range task.ErrorPublishList {
+			expr := publish_obj.ExpressionName
+			err := s.appendExpression(all_exprs, &expr, &counter)
+			if err != nil {
+				return nil, err
+			}
+		}
+		for _, publish_obj := range task.CompletePublishList {
 			expr := publish_obj.ExpressionName
 			err := s.appendExpression(all_exprs, &expr, &counter)
 			if err != nil {
@@ -376,6 +391,16 @@ func (t Task) getErrorPublishList() (publish_list []PublishObj, err error) {
 
 func (t Task) tryErrorPublishMap() (publish_map map[string]string) {
 	publish_map = createPublishMap(t.ErrorPublishList)
+	return
+}
+
+func (t Task) getCompletePublishList() (publish_list []PublishObj, err error) {
+	publish_list, err = createPublishList(t.CompletePublishRaw)
+	return
+}
+
+func (t Task) tryCompletePublishMap() (publish_map map[string]string) {
+	publish_map = createPublishMap(t.CompletePublishList)
 	return
 }
 

@@ -1,0 +1,30 @@
+name: no_publish
+
+description: To test that publish is optional
+
+start:
+    - simple_task
+
+tasks:
+    simple_task:
+        action: clients.mock.get_success
+        on-success:
+            - simple_task2: <%jmes `true` %>
+    simple_task2:
+        action: clients.mock.get_failure
+        on-error:
+            - simple_task3: <%jmes `true` %>
+    simple_task3:
+        on-success:
+            - simple_task4: <%jmes `true` %>
+    simple_task4:
+        on-failure:
+            - simple_task5: <%jmes `true` %>
+    simple_task5:
+        publish:
+            - val: 10
+
+output:
+    body:
+        val: <%jmes main.val %>
+    status_code: <%jmes `200` %>

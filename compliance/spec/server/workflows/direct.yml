@@ -1,0 +1,5 @@
+name: get_direct
+
+output:
+    body: <%jmes `"OK"` %>
+    status_code: <%jmes `200` %>

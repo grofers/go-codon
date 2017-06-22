@@ -1,0 +1,32 @@
+name: start_test
+
+start:
+    - simple_task1
+    - simple_task2
+
+# Since get_success has a sleep of 5ms both these tasks
+# should have been started with original values. After
+# execution the values should have been exchanged. If
+# these tasks are not called concurrently, both values
+# would be the same.
+tasks:
+    simple_task1:
+        action: clients.mock.get_success
+        input:
+            val: <%jmes main.val2 %>
+            wait: 5
+        publish:
+            - val1: <%jmes action.val %>
+    simple_task2:
+        action: clients.mock.get_success
+        input:
+            val: <%jmes main.val1 %>
+            wait: 5
+        publish:
+            - val2: <%jmes action.val %>
+
+output:
+    body:
+        val1: <%jmes main.val1 %>
+        val2: <%jmes main.val2 %>
+    status_code: <%jmes `200` %>

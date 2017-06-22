@@ -68,7 +68,11 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map *map[string]interfa
 	expr_map := make(map[string]interface{})
 	expr_map["main"] = var_map
 	expr_map["constants"] = config.YmlConfig.Constants
-	{{if $element.Action}}
+
+	var err error
+	is_error := false
+
+	{{ if $element.Action }}
 	arg_map := make(map[string]interface{})
 	{{if gt (len $element.Input) 0}}
 	func() {
@@ -79,83 +83,144 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map *map[string]interfa
 	}()
 	{{end}}
 	{{if $element.Timeout}}arg_map["_timeout"] = int64({{$element.Timeout}}){{end}}
+
 	{{ if eq (index $.ActionMap $element.Action).Type "clients" }}
 	log.Println("[DEBUG] Sending a request to {{ (index $.ActionMap $element.Action).Pascalized }} API")
-	resp, err := {{ (index $.ActionMap $element.Action).Pascalized }}(&arg_map)
-	if err != nil {
-		log.Println("[WARN] Failed to get response from {{ (index $.ActionMap $element.Action).Pascalized }} API: ", resp, " Err: ", err, " Args: ", arg_map)
-		defer var_map_mutex.Unlock()
-		var_map_mutex.Lock()
-		{{range $index2, $element2 := $element.ErrorPublishList}}
-		(*var_map)["{{$element2.VariableName}}"], _ = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(&expr_map)
-		{{end}}
-		return err
+	resp, rerr := {{ (index $.ActionMap $element.Action).Pascalized }}(&arg_map)
+	err = rerr
+	if err == nil {
+		resp_map := resp.Payload
+		log.Println("[DEBUG] Received response from {{ (index $.ActionMap $element.Action).Pascalized }} API: ", resp_map)
+		expr_map["action"] = resp_map
 	}
-	resp_map := resp.Payload
-	log.Println("[DEBUG] Received response from {{ (index $.ActionMap $element.Action).Pascalized }} API: ", resp_map)
 	{{ else }}
-	resp_map, err := {{ (index $.ActionMap $element.Action).Pascalized }}(&arg_map)
-	if err != nil {
-		defer var_map_mutex.Unlock()
-		var_map_mutex.Lock()
-		{{range $index2, $element2 := $element.ErrorPublishList}}
-		(*var_map)["{{$element2.VariableName}}"], _ = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(&expr_map)
-		{{end}}
-		return err
+	resp, rerr := {{ (index $.ActionMap $element.Action).Pascalized }}(&arg_map)
+	err = rerr
+	if err == nil {
+		expr_map["action"] = resp
 	}
 	{{ end }}
-	expr_map["action"] = resp_map
+
 	{{ else if $element.WithItems }}
-	var err interface{} = nil
+	var perr interface{} = nil
 	var wg sync.WaitGroup
 	var iterlist_interface interface{}
+	var iterlist []interface{}
+	var_maps := []map[string]interface{} {}
+	err_objs := []*error {}
+
 	func() {
 		defer var_map_mutex.RUnlock()
 		var_map_mutex.RLock()
-		iterlist_interface, _ = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element.WithItems).Srno }}(&expr_map)
+		iterlist_interface, err = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element.WithItems).Srno }}(&expr_map)
 	}()
 
-	iterlist, ok := iterlist_interface.([]interface{})
-	if !ok {
-		return fmt.Errorf("Error casting iteration list into array: %s\n", iterlist_interface)
-	}
+	func() {
+		if err != nil {
+			return
+		}
+		var ok bool
+		iterlist, ok = iterlist_interface.([]interface{})
+		if !ok {
+			err = fmt.Errorf("Error casting iteration list into array: %s\n", iterlist_interface)
+			return
+		}
 
-	wg.Add(len(iterlist))
+		wg.Add(len(iterlist))
 
-	var_maps := []map[string]interface{} {}
-
-	for _, element := range iterlist {
-		expr_map["item"] = element
-		new_var_map := make(map[string]interface{})
-		new_var_map_mutex := &sync.RWMutex{}
-		{{if gt (len $element.Loop.Input) 0}}
-		func() {
-			defer var_map_mutex.RUnlock()
-			var_map_mutex.RLock()
-			{{range $index2, $element2 := $element.Loop.Input}}
-			new_var_map["{{$index2}}"], _ = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2).Srno }}(&expr_map){{end}}
-		}()
-		{{end}}
-		var_maps = append(var_maps, new_var_map)
-
-		go func() {
-			defer func() {
-				if r := recover(); r != nil {
-					err = r
-				}
-				wg.Done()
+		for _, element := range iterlist {
+			expr_map["item"] = element
+			new_var_map := make(map[string]interface{})
+			var nil_err error
+			var err_obj *error
+			err_obj = &nil_err
+			new_var_map_mutex := &sync.RWMutex{}
+			{{if gt (len $element.Loop.Input) 0}}
+			func() {
+				defer var_map_mutex.RUnlock()
+				var_map_mutex.RLock()
+				{{range $index2, $element2 := $element.Loop.Input}}
+				new_var_map["{{$index2}}"], _ = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2).Srno }}(&expr_map){{end}}
 			}()
-			{{printf "task_%s__%s" $.OrigSpec.Name $element.Loop.TaskName}}(&new_var_map, new_var_map_mutex)
-		}()
+			{{end}}
+			var_maps = append(var_maps, new_var_map)
+			err_objs = append(err_objs, err_obj)
+
+
+			go func() {
+				var terr error
+				defer func() {
+					if r := recover(); r != nil {
+						perr = r
+					}
+					if terr != nil {
+						(*err_obj) = terr
+						is_error = true
+						err = terr
+					}
+					wg.Done()
+				}()
+				terr = {{printf "task_%s__%s" $.OrigSpec.Name $element.Loop.TaskName}}(&new_var_map, new_var_map_mutex)
+			}()
+		}
+		expr_map["item"] = nil
+
+		wg.Wait()
+	}()
+
+	if perr != nil {
+		panic(perr)
 	}
-	expr_map["item"] = nil
+	{{ end }}
 
-	wg.Wait()
-
+	{{ if $element.Action }}
 	if err != nil {
-		panic(err)
+		log.Println("[WARN] Failed to get response from {{ (index $.ActionMap $element.Action).Pascalized }} API: ", resp, " Err: ", err, " Args: ", arg_map)
+		is_error = true
+		err_val := reflect.ValueOf(err)
+		if err_val.Kind() == reflect.Struct {
+			err_payload := err_val.FieldByName("Payload")
+			if err_payload.IsValid() {
+				expr_map["action"] = err_payload.Interface()
+			}
+		} else {
+			expr_map["action_exception"] = err
+		}
 	}
+	{{ else if $element.WithItems }}
+	if err != nil {
+		is_error = true
+	}
+	{{ end }}
 
+	{{ if $element.WithItems }}
+	{{ if $element.Loop.ErrorPublishList }}
+	func() {
+		defer var_map_mutex.Unlock()
+		var_map_mutex.Lock()
+		{{range $index2, $element2 := $element.Loop.ErrorPublishList}}
+		(*var_map)["{{$element2.VariableName}}"] = []interface{}{}
+		{{end}}
+		for index, element := range iterlist {
+			expr_map["item"] = element
+			if err_objs[index] != nil {
+				err_val := reflect.ValueOf(err_objs[index])
+				if err_val.Kind() == reflect.Struct {
+					err_payload := err_val.FieldByName("Payload")
+					if err_payload.IsValid() {
+						expr_map["task"] = err_payload.Interface()
+					}
+				} else {
+					expr_map["task_exception"] = err_objs[index]
+				}
+			}
+			{{range $index2, $element2 := $element.Loop.ErrorPublishList}}
+			(*var_map)["{{$element2.VariableName}}"] = append((*var_map)["{{$element2.VariableName}}"].([]interface{}), maybe({{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(&expr_map)))
+			{{end}}
+		}
+	}()
+	{{ end }}
+	{{ if $element.Loop.PublishList }}
 	func() {
 		defer var_map_mutex.Unlock()
 		var_map_mutex.Lock()
@@ -165,66 +230,148 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map *map[string]interfa
 		for index, element := range iterlist {
 			expr_map["item"] = element
 			expr_map["task"] = var_maps[index]
+			if err_objs[index] != nil {
+				expr_map["task"] = nil
+			}
 			{{range $index2, $element2 := $element.Loop.PublishList}}
 			(*var_map)["{{$element2.VariableName}}"] = append((*var_map)["{{$element2.VariableName}}"].([]interface{}), maybe({{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(&expr_map)))
 			{{end}}
 		}
 	}()
-	{{end}}
+	{{ end }}
+	{{ end }}
+	{{if gt (len $element.ErrorPublishList) 0}}
+	if is_error {
+		func() {
+			defer var_map_mutex.Unlock()
+			var_map_mutex.Lock()
+			{{range $index2, $element2 := $element.ErrorPublishList}}
+			(*var_map)["{{$element2.VariableName}}"], _ = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(&expr_map)
+			{{end}}
+		}()
+	}
+	{{ end }}
 	{{if gt (len $element.PublishList) 0}}
-	func() {
-		defer var_map_mutex.Unlock()
-		var_map_mutex.Lock()
-		{{range $index2, $element2 := $element.PublishList}}
-		(*var_map)["{{$element2.VariableName}}"], _ = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(&expr_map)
-		{{end}}
-	}()
-	{{end}}
+	if !is_error {
+		func() {
+			defer var_map_mutex.Unlock()
+			var_map_mutex.Lock()
+			{{range $index2, $element2 := $element.PublishList}}
+			(*var_map)["{{$element2.VariableName}}"], _ = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(&expr_map)
+			{{end}}
+		}()
+	}
+	{{ end }}
+
 	{{range $index2, $element2 := $element.OnSuccessList}}
 	var expr{{$element2.Srno}} interface{}
 	var e{{$element2.Srno}} error
 	{{end}}
-	{{if gt (len $element.OnSuccessList) 0}}
-	func() {
-		defer var_map_mutex.RUnlock()
-		var_map_mutex.RLock()
-		{{range $index2, $element2 := $element.OnSuccessList}}
-		expr{{$element2.Srno}}, e{{$element2.Srno}} = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(&expr_map){{end}}
-	}()
+	{{range $index2, $element2 := $element.OnErrorList}}
+	var eexpr{{$element2.Srno}} interface{}
+	var ee{{$element2.Srno}} error
 	{{end}}
-
-	{{if eq (len $element.OnSuccessList) 1}}
-	if e1 == nil && expr1.(bool) {
-		{{printf "task_%s__%s" $.OrigSpec.Name (index $element.OnSuccessList 0).TaskName}}(var_map, var_map_mutex)
-	}
-	{{else if gt (len $element.OnSuccessList) 1}}
-	var wg sync.WaitGroup
-	var wgerr interface{}
-	wgerr = nil
-	{{range $index2, $element2 := $element.OnSuccessList}}
-	if e{{$element2.Srno}} == nil && expr{{$element2.Srno}}.(bool) {
-		wg.Add(1)
-		go func() {
-			defer func () {
-				if r := recover(); r != nil {
-					wgerr = r
-				}
-				wg.Done()
-			}()
-			{{printf "task_%s__%s" $.OrigSpec.Name $element2.TaskName}}(var_map, var_map_mutex)
+	{{if gt (len $element.OnErrorList) 0}}
+	if is_error {
+		func() {
+			defer var_map_mutex.RUnlock()
+			var_map_mutex.RLock()
+			{{range $index2, $element2 := $element.OnErrorList}}
+			eexpr{{$element2.Srno}}, ee{{$element2.Srno}} = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(&expr_map){{end}}
 		}()
 	}
 	{{end}}
-	wg.Wait()
+	{{if gt (len $element.OnSuccessList) 0}}
+	if !is_error {
+		func() {
+			defer var_map_mutex.RUnlock()
+			var_map_mutex.RLock()
+			{{range $index2, $element2 := $element.OnSuccessList}}
+			expr{{$element2.Srno}}, e{{$element2.Srno}} = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(&expr_map){{end}}
+		}()
+	}
 	{{end}}
+
+	{{ if gt (len $element.OnErrorList) 0 }}
+	if is_error {
+		{{if eq (len $element.OnErrorList) 1}}
+		if ee1 == nil && eexpr1.(bool) {
+			{{printf "task_%s__%s" $.OrigSpec.Name (index $element.OnErrorList 0).TaskName}}(var_map, var_map_mutex)
+		}
+		{{else if gt (len $element.OnErrorList) 1}}
+		var wg sync.WaitGroup
+		var wgerr interface{}
+		wgerr = nil
+		{{range $index2, $element2 := $element.OnErrorList}}
+		if ee{{$element2.Srno}} == nil && eexpr{{$element2.Srno}}.(bool) {
+			wg.Add(1)
+			go func() {
+				defer func () {
+					if r := recover(); r != nil {
+						wgerr = r
+					}
+					wg.Done()
+				}()
+				{{printf "task_%s__%s" $.OrigSpec.Name $element2.TaskName}}(var_map, var_map_mutex)
+			}()
+		}
+		{{end}}
+		wg.Wait()
+		{{end}}
+	}
+	{{ end }}
+	{{ if gt (len $element.OnSuccessList) 0 }}
+	if !is_error {
+		{{if eq (len $element.OnSuccessList) 1}}
+		if e1 == nil && expr1.(bool) {
+			{{printf "task_%s__%s" $.OrigSpec.Name (index $element.OnSuccessList 0).TaskName}}(var_map, var_map_mutex)
+		}
+		{{else if gt (len $element.OnSuccessList) 1}}
+		var wg sync.WaitGroup
+		var wgerr interface{}
+		wgerr = nil
+		{{range $index2, $element2 := $element.OnSuccessList}}
+		if e{{$element2.Srno}} == nil && expr{{$element2.Srno}}.(bool) {
+			wg.Add(1)
+			go func() {
+				defer func () {
+					if r := recover(); r != nil {
+						wgerr = r
+					}
+					wg.Done()
+				}()
+				{{printf "task_%s__%s" $.OrigSpec.Name $element2.TaskName}}(var_map, var_map_mutex)
+			}()
+		}
+		{{end}}
+		wg.Wait()
+		{{end}}
+	}
+	{{ end }}
+
 	{{range $index2, $element2 := $element.OnCompleteList}}
-	oncexpr{{$element2.Srno}}, e{{$element2.Srno}} := {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(&expr_map){{end}}
+	onc_expr{{$element2.Srno}}, onc_e{{$element2.Srno}} := {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(&expr_map){{end}}
 	{{range $index2, $element2 := $element.OnCompleteList}}
-	if e{{$element2.Srno}} == nil && oncexpr{{$element2.Srno}}.(bool) {
+	if onc_e{{$element2.Srno}} == nil && onc_expr{{$element2.Srno}}.(bool) {
 		{{printf "task_%s__%s" $.OrigSpec.Name $element2.TaskName}}(var_map, var_map_mutex)
 	}
 	{{end}}
-	return nil
+
+	{{if gt (len $element.CompletePublishList) 0}}
+	func() {
+		defer var_map_mutex.Unlock()
+		var_map_mutex.Lock()
+		{{range $index2, $element2 := $element.CompletePublishList}}
+		(*var_map)["{{$element2.VariableName}}"], _ = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(&expr_map)
+		{{end}}
+	}()
+	{{end}}
+
+	if is_error {
+		return err
+	} else {
+		return nil
+	}
 }
 {{end}}
 

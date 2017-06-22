@@ -1,0 +1,24 @@
+name: recursion
+
+description: To test recursion of tasks. Tasks calling themselves.
+
+start:
+    - add_till_10
+
+tasks:
+    add_till_10:
+        on-success:
+            - add_1: <%jmes main.val < `10` %>
+    add_1:
+        publish:
+            # TODO: We need to resolve pointers before sending
+            # to jmes path. Functions will break otherwise.
+            # - val: <%jmes sum([to_number(main.val), `1`]) %>
+            - val: <%jmes `10` %>
+        on-success:
+            - add_1: <%jmes main.val < `10` %>
+
+output:
+    body:
+        val: <%jmes main.val %>
+    status_code: <%jmes `200` %>
