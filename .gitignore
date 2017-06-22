@@ -26,3 +26,4 @@ _testmain.go
 bootstrap/golang/bindata.go
 generator/golang/bindata.go
 vendor/
+testing/

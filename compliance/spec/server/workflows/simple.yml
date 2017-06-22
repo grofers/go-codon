@@ -1,0 +1,20 @@
+name: get_simple
+
+start:
+    - simple_task
+
+tasks:
+    simple_task:
+        action: clients.mock.get_success
+        input:
+            string_val: <%jmes main.string_val %>
+            boolean_val: <%jmes main.boolean_val %>
+            int_val: <%jmes main.int_val %>
+            float_val: <%jmes main.float_val %>
+        timeout: 1000
+        publish:
+            - success_reply: <%jmes action %>
+
+output:
+    body: <%jmes main.success_reply %>
+    status_code: <%jmes `200` %>

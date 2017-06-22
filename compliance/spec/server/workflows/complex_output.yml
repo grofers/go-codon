@@ -1,0 +1,20 @@
+name: complex_output
+
+output:
+    body:
+      dict:
+        a: '"a"'
+        b: 1
+        c: true
+        d: "\"true\""
+      list: '[10,20,30]'
+      # TODO: YAML lists are not supported yet!
+        # - 10
+        # - 20
+        # - 30
+      # list_obj:
+      #   - k1: '"v1"'
+      #     k2: '"v2"'
+      #   - k1: '"v3"'
+      #     k2: '"v4"'
+    status_code: <%jmes `200` %>

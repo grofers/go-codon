@@ -1,0 +1,41 @@
+name: get_chain_complete
+
+start:
+    - first_task
+
+tasks:
+    first_task:
+        action: clients.mock.get_success
+        publish:
+            - first_val: "\"success-first\""
+        publish-on-error:
+            - first_val: "\"error-first\""
+        publish-on-complete:
+            - third_val: "\"complete-first\""
+        on-success:
+            - second_task: <%jmes `true` %>
+        on-error:
+            - third_task: <%jmes `true` %>
+        on-complete:
+            - fourth_task: <%jmes `true` %>
+    second_task:
+        publish:
+            - second_val: "\"success-second\""
+            - third_val: "\"success-second\""
+            - fourth_val: "\"success-second\""
+    third_task:
+        publish:
+            - second_val: "\"error-second\""
+            - third_val: "\"error-second\""
+            - fourth_val: "\"error-second\""
+    fourth_task:
+        publish:
+            - fourth_val: "\"complete-fourth\""
+
+output:
+    body:
+        first_val: <%jmes main.first_val %>
+        second_val: <%jmes main.second_val %>
+        third_val: <%jmes main.third_val %>
+        fourth_val: <%jmes main.fourth_val %>
+    status_code: <%jmes `200` %>

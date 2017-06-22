@@ -1,0 +1,22 @@
+name: publish_serial
+
+start:
+    - simple_task
+
+tasks:
+    simple_task:
+        publish:
+            - retval: 1
+            - retval: 2
+            - retval: 3
+            - retval: 4
+            - retval: 5
+            - retval: 6
+            - retval: 7
+            - retval: 8
+            - retval: 9
+
+output:
+    body:
+        retval: <%jmes main.retval %>
+    status_code: <%jmes `200` %>

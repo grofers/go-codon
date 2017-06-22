@@ -1,0 +1,15 @@
+name: no_input
+
+start:
+    - first_task
+
+tasks:
+    first_task:
+        action: clients.mock.get_success
+        timeout: 1000
+        publish:
+            - success_reply: <%jmes action %>
+
+output:
+    body: <%jmes main.success_reply %>
+    status_code: <%jmes `200` %>

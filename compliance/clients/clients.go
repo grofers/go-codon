@@ -1,7 +1,7 @@
 package clients
 
 import (
-	mock_client "github.com/grofers/go-codon/clients/mock/client"
+	mock_client "github.com/grofers/go-codon/testing/clients/mock/client"
 )
 
 
