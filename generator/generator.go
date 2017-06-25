@@ -2,21 +2,24 @@ package generator
 
 import (
 	"log"
+	"github.com/grofers/go-codon/generator/shared"
 	"github.com/grofers/go-codon/generator/golang"
 )
 
+type GenOpts shared.GenOpts
+
 type generatable interface {
-	Generate() bool
+	Generate(shared.GenOpts) bool
 }
 
 var language_map = map[string]generatable {
 	"golang": &golang.Generator,
 }
 
-func Generate(lang string) bool {
-	bs, ok := language_map[lang]
+func Generate(opts GenOpts) bool {
+	bs, ok := language_map[opts.Language]
 	if !ok {
-		log.Println("Support for language ", lang, " not implemented yet")
+		log.Println("Support for language ", opts.Language, " not implemented yet")
 	}
-	return bs.Generate()
+	return bs.Generate(shared.GenOpts(opts))
 }

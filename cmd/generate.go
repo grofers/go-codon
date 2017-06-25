@@ -22,6 +22,12 @@ import (
 	codon_generator "github.com/grofers/go-codon/generator"
 )
 
+var (
+	generateClients		bool
+	generateWorkflow	bool
+	generateServer		bool
+)
+
 // generateCmd represents the generate command
 var generateCmd = &cobra.Command{
 	Use:   "generate",
@@ -29,9 +35,21 @@ var generateCmd = &cobra.Command{
 	Long: `After you have run init on your project folder you should edit
 the specification and configuration files according to your project. Run
 this command to finally generate code according to the specification. Your
-working directory must be your project directory.`,
+working directory must be your project directory. Not specifying any
+generator flags will generate everything.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if codon_generator.Generate("golang") {
+		if !generateClients && !generateWorkflow && !generateServer {
+			generateClients = true
+			generateWorkflow = true
+			generateServer = true
+		}
+		opts := codon_generator.GenOpts {
+			Language: "golang",
+			GenerateClients: generateClients,
+			GenerateWorkflow: generateWorkflow,
+			GenerateServer: generateServer,
+		}
+		if codon_generator.Generate(opts) {
 			log.Println("Generate successful")
 		} else {
 			log.Println("Generate failed")
@@ -51,6 +69,7 @@ func init() {
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// generateCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-
+	generateCmd.Flags().BoolVarP(&generateClients, "clients", "c", false, "Generate clients")
+	generateCmd.Flags().BoolVarP(&generateWorkflow, "workflow", "w", false, "Generate workflow")
+	generateCmd.Flags().BoolVarP(&generateServer, "server", "s", false, "Generate server")
 }
