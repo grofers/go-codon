@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-openapi/swag"
 
+	gen_shared "github.com/grofers/go-codon/generator/shared"
 	codon_shared "github.com/grofers/go-codon/shared"
 	config "github.com/grofers/go-codon/runtime/config"
 
@@ -249,7 +250,7 @@ func (gen *generator) GenerateWorkflow() bool {
 	return true
 }
 
-func (gen *generator) Generate() bool {
+func (gen *generator) Generate(opts gen_shared.GenOpts) bool {
 	gen.Init()
 	log.Println("Generating a codon project in golang ...")
 
@@ -261,20 +262,26 @@ func (gen *generator) Generate() bool {
 		return false
 	}
 
-	if !gen.GenerateUpstream() {
-		return false
+	if opts.GenerateClients {
+		if !gen.GenerateUpstream() {
+			return false
+		}
+
+		if !gen.GenerateContent() {
+			return false
+		}
 	}
 
-	if !gen.GenerateContent() {
-		return false
+	if opts.GenerateWorkflow {
+		if !gen.GenerateWorkflow() {
+			return false
+		}
 	}
 
-	if !gen.GenerateWorkflow() {
-		return false
-	}
-
-	if !gen.GenerateService() {
-		return false
+	if opts.GenerateServer {
+		if !gen.GenerateService() {
+			return false
+		}
 	}
 
 	return true

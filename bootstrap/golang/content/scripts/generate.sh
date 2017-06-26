@@ -7,4 +7,4 @@ go get golang.org/x/net/context/ctxhttp
 go get github.com/tylerb/graceful
 go get github.com/jessevdk/go-flags
 
-codon generate
+codon generate ${ARGS}
