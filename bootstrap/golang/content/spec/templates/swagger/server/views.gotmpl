@@ -29,7 +29,7 @@ func configureViews(api *{{.Package}}.{{ pascalize .Name }}API) {
       }{{ end }}
     }
 
-    resp := workflows.{{ pascalize $workflow }}(&var_map).(map[string]interface{})
+    resp := workflows.{{ pascalize $workflow }}(var_map).(map[string]interface{})
 
     status_code, _ := conv.Int(resp["status_code"])
 

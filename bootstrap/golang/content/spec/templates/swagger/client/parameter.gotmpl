@@ -79,7 +79,7 @@ func New{{ pascalize .Name }}ParamsWithHTTPClient(client *http.Client) *{{ pasca
   }
 }
 
-func New{{ pascalize .Name }}ParamsFromMap(params *map[string]interface{}) (*{{ pascalize .Name }}Params, error) {
+func New{{ pascalize .Name }}ParamsFromMap(params map[string]interface{}) (*{{ pascalize .Name }}Params, error) {
   retParams := New{{ pascalize .Name }}Params()
   err := codon_ms.Decode(params, &retParams)
   if err != nil {
