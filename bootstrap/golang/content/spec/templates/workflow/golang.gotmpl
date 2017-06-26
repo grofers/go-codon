@@ -203,15 +203,17 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map *map[string]interfa
 		{{end}}
 		for index, element := range iterlist {
 			expr_map["item"] = element
-			if err_objs[index] != nil {
-				err_val := reflect.ValueOf(err_objs[index])
+			var err_obj *error
+			err_obj = err_objs[index]
+			if err_obj != nil && *err_obj != nil {
+				err_val := reflect.ValueOf(*err_obj)
 				if err_val.Kind() == reflect.Struct {
 					err_payload := err_val.FieldByName("Payload")
 					if err_payload.IsValid() {
 						expr_map["task"] = err_payload.Interface()
 					}
 				} else {
-					expr_map["task_exception"] = err_objs[index]
+					expr_map["task_exception"] = *err_obj
 				}
 			}
 			{{range $index2, $element2 := $element.Loop.ErrorPublishList}}
@@ -230,7 +232,9 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map *map[string]interfa
 		for index, element := range iterlist {
 			expr_map["item"] = element
 			expr_map["task"] = var_maps[index]
-			if err_objs[index] != nil {
+			var err_obj *error
+			err_obj = err_objs[index]
+			if err_obj != nil && *err_obj != nil {
 				expr_map["task"] = nil
 			}
 			{{range $index2, $element2 := $element.Loop.PublishList}}
