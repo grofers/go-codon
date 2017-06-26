@@ -354,8 +354,7 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map *map[string]interfa
 	{{ end }}
 
 	{{range $index2, $element2 := $element.OnCompleteList}}
-	onc_expr{{$element2.Srno}}, onc_e{{$element2.Srno}} := {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(&expr_map){{end}}
-	{{range $index2, $element2 := $element.OnCompleteList}}
+	onc_expr{{$element2.Srno}}, onc_e{{$element2.Srno}} := {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(&expr_map)
 	if onc_e{{$element2.Srno}} == nil && onc_expr{{$element2.Srno}}.(bool) {
 		{{printf "task_%s__%s" $.OrigSpec.Name $element2.TaskName}}(var_map, var_map_mutex)
 	}
