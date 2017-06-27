@@ -201,7 +201,9 @@ func (gen *generator) generateWorkflows(prefix string, dest string) bool {
 	for _, file := range files {
 		if file.IsDir() {
 			new_prefix := filepath.Join(prefix, file.Name())
-			gen.generateWorkflows(new_prefix, dest)
+			if !gen.generateWorkflows(new_prefix, dest) {
+				return false
+			}
 			continue
 		}
 		gen.CurrentSpecFile = file.Name()
@@ -244,10 +246,7 @@ func (gen *generator) generateWorkflows(prefix string, dest string) bool {
 
 func (gen *generator) GenerateWorkflow() bool {
 	gen.WorkflowsBasePath = "spec/server/workflows"
-	if !gen.generateWorkflows(gen.WorkflowsBasePath, "workflows") {
-		return false
-	}
-	return true
+	return gen.generateWorkflows(gen.WorkflowsBasePath, "workflows")
 }
 
 func (gen *generator) Generate(opts gen_shared.GenOpts) bool {
