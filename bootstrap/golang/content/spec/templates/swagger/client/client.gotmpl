@@ -39,7 +39,7 @@ type Client struct {
 
 {{ .Description }}{{ end }}{{ else if .Description}}{{ .Description }}{{ else }}{{ humanize .Name }} API{{ end }}
 */
-func (a *Client) {{ pascalize .Name }}(all_params *map[string]interface{}) {{ if .SuccessResponse }}({{ range .SuccessResponses }}*{{ pascalize .Name }}, {{ end }}{{ end }}error{{ if .SuccessResponse }}){{ end }} {
+func (a *Client) {{ pascalize .Name }}(all_params map[string]interface{}) {{ if .SuccessResponse }}({{ range .SuccessResponses }}*{{ pascalize .Name }}, {{ end }}{{ end }}error{{ if .SuccessResponse }}){{ end }} {
   {{ $length := len .SuccessResponses }}
   params, err := New{{ pascalize .Name }}ParamsFromMap(all_params)
   if err != nil {
@@ -47,8 +47,8 @@ func (a *Client) {{ pascalize .Name }}(all_params *map[string]interface{}) {{ if
   }
   {{ if .Authorized }}
   var authInfo runtime.ClientAuthInfoWriter
-  if _, ok := (*all_params)["BasicAuthUsername"]; ok {
-    authInfo = httptransport.BasicAuth((*all_params)["BasicAuthUsername"].(string), (*all_params)["BasicAuthPassword"].(string))
+  if _, ok := all_params["BasicAuthUsername"]; ok {
+    authInfo = httptransport.BasicAuth(all_params["BasicAuthUsername"].(string), all_params["BasicAuthPassword"].(string))
   }
   {{ end }}
   {{ if .HasStreamingResponse }}
