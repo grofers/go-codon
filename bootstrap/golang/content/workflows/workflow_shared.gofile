@@ -1,12 +1,85 @@
 package workflows
 
 import (
+	"log"
 	"reflect"
+	"encoding/json"
 )
+
+type tasklogger struct {
+	log_expressions bool
+	log_flow bool
+	log_actions bool
+}
+
+func (l *tasklogger) setLogExpressions(obj interface{}, err error) {
+	l.log_expressions = false
+	obj_val := reflect.ValueOf(obj)
+	if obj_val.Kind() == reflect.Bool {
+		l.log_expressions = obj_val.Bool()
+	}
+}
+
+func (l *tasklogger) setLogFlow(obj interface{}, err error) {
+	l.log_flow = false
+	obj_val := reflect.ValueOf(obj)
+	if obj_val.Kind() == reflect.Bool {
+		l.log_flow = obj_val.Bool()
+	}
+}
+
+func (l *tasklogger) setLogActions(obj interface{}, err error) {
+	l.log_actions = false
+	obj_val := reflect.ValueOf(obj)
+	if obj_val.Kind() == reflect.Bool {
+		l.log_actions = obj_val.Bool()
+	}
+}
+
+func (l tasklogger) logExpressionf(format string, v ...interface{}) {
+	if l.log_expressions {
+		v_json := getJsonFromInterface(v)
+		log.Printf(format, v_json...)
+	}
+}
+
+func (l tasklogger) logFlowf(format string, v ...interface{}) {
+	if l.log_flow {
+		v_json := getJsonFromInterface(v)
+		log.Printf(format, v_json...)
+	}
+}
+
+func (l tasklogger) logActionf(format string, v ...interface{}) {
+	if l.log_actions {
+		v_json := getJsonFromInterface(v)
+		log.Printf(format, v_json...)
+	}
+}
+
+func getJsonFromInterface(inp []interface{}) []interface{} {
+	outp := make([]interface{}, len(inp))
+	for inp_index, inp_elem := range inp {
+		inp_json, err := json.Marshal(inp_elem)
+		if err == nil {
+			outp[inp_index] = string(inp_json)
+		} else {
+			outp[inp_index] = inp_elem
+		}
+	}
+	return outp
+}
 
 func maybe(obj interface{}, err error) interface{} {
 	if err != nil {
 		return nil
+	}
+	return obj
+}
+
+func maybe_or_default(obj interface{}, err error, def interface{}) interface{} {
+	if err != nil {
+		return def
 	}
 	return obj
 }

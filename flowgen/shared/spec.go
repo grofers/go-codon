@@ -55,6 +55,7 @@ type Task struct {
 	Timeout				int64					`yaml:"timeout"`
 	WithItems			string					`yaml:"with-items"`
 	Loop				LoopInfo				`yaml:"loop"`
+	Logging				LoggingInfo				`yaml:"logging"`
 }
 
 type LoopInfo struct {
@@ -66,6 +67,12 @@ type LoopInfo struct {
 	ErrorPublishRaw		interface{}			`yaml:"publish-on-error"`
 	ErrorPublish		map[string]string	`yaml:"-"`
 	ErrorPublishList	[]PublishObj		`yaml:"-"`
+}
+
+type LoggingInfo struct {
+	Expressions		string		`yaml:"expressions"`
+	Flow			string		`yaml:"flow"`
+	Actions			string		`yaml:"actions"`
 }
 
 type TodoObj struct {
@@ -92,6 +99,26 @@ type Action struct {
 	Pascalized		string
 }
 
+func (l *LoggingInfo) checkDefaults() {
+	if l.Expressions == "" {
+		l.Expressions = "false"
+	}
+	if l.Flow == "" {
+		l.Flow = "false"
+	}
+	if l.Actions == "" {
+		l.Actions = "true"
+	}
+}
+
+func (l LoggingInfo) getExpressions() []string {
+	return []string {
+		l.Expressions,
+		l.Flow,
+		l.Actions,
+	}
+}
+
 func ReadSpec(filename string) (Spec, error) {
 	filename_data, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -114,6 +141,10 @@ func (s *Spec) Process() (PostSpec, error) {
 	ps.OrigSpec = s
 	if s.References == nil {
 		s.References = make(map[string]map[string]string)
+	}
+	for task_name, task := range s.Tasks {
+		task.Logging.checkDefaults()
+		s.Tasks[task_name] = task
 	}
 	ps.LanguageSpec = make(map[string]interface{})
 
@@ -219,6 +250,12 @@ func (s *Spec) getExpressionMap() (map[string]Expression, error) {
 
 	for _, task := range s.Tasks {
 		for _, expr := range task.Input {
+			err := s.appendExpression(all_exprs, &expr, &counter)
+			if err != nil {
+				return nil, err
+			}
+		}
+		for _, expr := range task.Logging.getExpressions() {
 			err := s.appendExpression(all_exprs, &expr, &counter)
 			if err != nil {
 				return nil, err

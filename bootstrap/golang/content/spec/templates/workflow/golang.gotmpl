@@ -69,6 +69,11 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interfac
 	expr_map["main"] = var_map
 	expr_map["constants"] = config.YmlConfig.Constants
 
+	logger := tasklogger {}
+	logger.setLogExpressions({{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element.Logging.Expressions).Srno }}(expr_map))
+	logger.setLogFlow({{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element.Logging.Flow).Srno }}(expr_map))
+	logger.setLogActions({{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element.Logging.Actions).Srno }}(expr_map))
+
 	var err error
 	is_error := false
 
@@ -78,25 +83,35 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interfac
 	func() {
 		defer var_map_mutex.RUnlock()
 		var_map_mutex.RLock()
+		var exerr error
+		logger.logExpressionf("[DEBUG] Mapping arguments using main bucket %v ...", expr_map["main"])
 		{{range $index2, $element2 := $element.Input}}
-		arg_map["{{$index2}}"], _ = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2).Srno }}(expr_map){{end}}
+		arg_map["{{$index2}}"], exerr = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2).Srno }}(expr_map)
+		if exerr != nil {
+			logger.logExpressionf("[WARN] Evaluating {{escapestring (index $.ExpressionMap $element2).Type}} expression {{escapestring (index $.ExpressionMap $element2).Raw}} for argument {{$index2}}. Failure: %v", exerr)
+		} else {
+			logger.logExpressionf("[DEBUG] Evaluating {{escapestring (index $.ExpressionMap $element2).Type}} expression {{escapestring (index $.ExpressionMap $element2).Raw}} for argument {{$index2}}. Result: %v", arg_map["{{$index2}}"])
+		}
+		{{end}}
 	}()
 	{{end}}
 	{{if $element.Timeout}}arg_map["_timeout"] = int64({{$element.Timeout}}){{end}}
 
 	{{ if eq (index $.ActionMap $element.Action).Type "clients" }}
-	log.Println("[DEBUG] Sending a request to {{ (index $.ActionMap $element.Action).Pascalized }} API")
+	logger.logActionf("[DEBUG] Sending a request to {{ (index $.ActionMap $element.Action).Pascalized }} API")
 	resp, rerr := {{ (index $.ActionMap $element.Action).Pascalized }}(arg_map)
 	err = rerr
 	if err == nil {
 		resp_map := resp.Payload
-		log.Println("[DEBUG] Received response from {{ (index $.ActionMap $element.Action).Pascalized }} API: ", resp_map)
+		logger.logActionf("[DEBUG] Received response from {{ (index $.ActionMap $element.Action).Pascalized }} API: %v", resp_map)
 		expr_map["action"] = resp_map
 	}
 	{{ else }}
+	logger.logActionf("[DEBUG] Executing custom action {{ (index $.ActionMap $element.Action).Pascalized }}")
 	resp, rerr := {{ (index $.ActionMap $element.Action).Pascalized }}(arg_map)
 	err = rerr
 	if err == nil {
+		logger.logActionf("[DEBUG] Result of custom action {{ (index $.ActionMap $element.Action).Pascalized }}: %v", resp)
 		expr_map["action"] = resp
 	}
 	{{ end }}
@@ -113,6 +128,11 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interfac
 		defer var_map_mutex.RUnlock()
 		var_map_mutex.RLock()
 		iterlist_interface, err = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element.WithItems).Srno }}(expr_map)
+		if err == nil {
+			logger.logExpressionf("[DEBUG] Evaluating {{escapestring (index $.ExpressionMap $element.WithItems).Type}} expression {{escapestring (index $.ExpressionMap $element.WithItems).Raw}} for iteration. Result: %v", iterlist_interface)
+		} else {
+			logger.logExpressionf("[DEBUG] Evaluating {{escapestring (index $.ExpressionMap $element.WithItems).Type}} expression {{escapestring (index $.ExpressionMap $element.WithItems).Raw}} for iteration. Error: %v", err)
+		}
 	}()
 
 	func() {
@@ -139,8 +159,16 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interfac
 			func() {
 				defer var_map_mutex.RUnlock()
 				var_map_mutex.RLock()
+				var exerr error
+				logger.logExpressionf("[DEBUG] Mapping arguments using main bucket %v ...", expr_map["main"])
 				{{range $index2, $element2 := $element.Loop.Input}}
-				new_var_map["{{$index2}}"], _ = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2).Srno }}(expr_map){{end}}
+				new_var_map["{{$index2}}"], exerr = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2).Srno }}(expr_map)
+				if exerr != nil {
+					logger.logExpressionf("[WARN] Evaluating {{escapestring (index $.ExpressionMap $element2).Type}} expression {{escapestring (index $.ExpressionMap $element2).Raw}} for argument {{$index2}}. Failure: %v", exerr)
+				} else {
+					logger.logExpressionf("[DEBUG] Evaluating {{escapestring (index $.ExpressionMap $element2).Type}} expression {{escapestring (index $.ExpressionMap $element2).Raw}} for argument {{$index2}}. Result: %v", new_var_map["{{$index2}}"])
+				}
+				{{end}}
 			}()
 			{{end}}
 			var_maps = append(var_maps, new_var_map)
@@ -175,7 +203,7 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interfac
 
 	{{ if $element.Action }}
 	if err != nil {
-		log.Println("[WARN] Failed to get response from {{ (index $.ActionMap $element.Action).Pascalized }} API: ", resp, " Err: ", err, " Args: ", arg_map)
+		logger.logActionf("[WARN] Failed to get response from {{ (index $.ActionMap $element.Action).Pascalized }} API: %v Err: %v Args: %v", resp, err, arg_map)
 		is_error = true
 		err_val := reflect.ValueOf(err)
 		if err_val.Kind() == reflect.Struct {
@@ -204,6 +232,8 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interfac
 		for index, element := range iterlist {
 			expr_map["item"] = element
 			var err_obj *error
+			var iter_result interface{}
+			var exerr error
 			err_obj = err_objs[index]
 			if err_obj != nil && *err_obj != nil {
 				err_val := reflect.ValueOf(*err_obj)
@@ -216,8 +246,16 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interfac
 					expr_map["task_exception"] = *err_obj
 				}
 			}
+			logger.logExpressionf("[DEBUG] Publishing variables using buckets %v ...", expr_map)
 			{{range $index2, $element2 := $element.Loop.ErrorPublishList}}
-			var_map["{{$element2.VariableName}}"] = append(var_map["{{$element2.VariableName}}"].([]interface{}), maybe({{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(expr_map)))
+			iter_result, exerr = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(expr_map)
+			if exerr != nil {
+				iter_result = nil
+				logger.logExpressionf("[WARN] Evaluating {{escapestring (index $.ExpressionMap $element2.ExpressionName).Type}} expression {{escapestring (index $.ExpressionMap $element2.ExpressionName).Raw}} for publishing variable {{$element2.VariableName}}. Failure: %v", exerr)
+			} else {
+				logger.logExpressionf("[DEBUG] Evaluating {{escapestring (index $.ExpressionMap $element2.ExpressionName).Type}} expression {{escapestring (index $.ExpressionMap $element2.ExpressionName).Raw}} for publishing variable {{$element2.VariableName}}. Result: %v", iter_result)
+			}
+			var_map["{{$element2.VariableName}}"] = append(var_map["{{$element2.VariableName}}"].([]interface{}), iter_result)
 			{{end}}
 		}
 	}()
@@ -233,12 +271,22 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interfac
 			expr_map["item"] = element
 			expr_map["task"] = var_maps[index]
 			var err_obj *error
+			var iter_result interface{}
+			var exerr error
 			err_obj = err_objs[index]
 			if err_obj != nil && *err_obj != nil {
 				expr_map["task"] = nil
 			}
+			logger.logExpressionf("[DEBUG] Publishing variables using buckets %v ...", expr_map)
 			{{range $index2, $element2 := $element.Loop.PublishList}}
-			var_map["{{$element2.VariableName}}"] = append(var_map["{{$element2.VariableName}}"].([]interface{}), maybe({{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(expr_map)))
+			iter_result, exerr = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(expr_map)
+			if exerr != nil {
+				iter_result = nil
+				logger.logExpressionf("[WARN] Evaluating {{escapestring (index $.ExpressionMap $element2.ExpressionName).Type}} expression {{escapestring (index $.ExpressionMap $element2.ExpressionName).Raw}} for publishing variable {{$element2.VariableName}}. Failure: %v", exerr)
+			} else {
+				logger.logExpressionf("[DEBUG] Evaluating {{escapestring (index $.ExpressionMap $element2.ExpressionName).Type}} expression {{escapestring (index $.ExpressionMap $element2.ExpressionName).Raw}} for publishing variable {{$element2.VariableName}}. Result: %v", iter_result)
+			}
+			var_map["{{$element2.VariableName}}"] = append(var_map["{{$element2.VariableName}}"].([]interface{}), iter_result)
 			{{end}}
 		}
 	}()
@@ -249,8 +297,15 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interfac
 		func() {
 			defer var_map_mutex.Unlock()
 			var_map_mutex.Lock()
+			var exerr error
+			logger.logExpressionf("[DEBUG] Publishing variables using buckets %v ...", expr_map)
 			{{range $index2, $element2 := $element.ErrorPublishList}}
-			var_map["{{$element2.VariableName}}"], _ = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(expr_map)
+			var_map["{{$element2.VariableName}}"], exerr = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(expr_map)
+			if exerr != nil {
+				logger.logExpressionf("[WARN] Evaluating {{escapestring (index $.ExpressionMap $element2.ExpressionName).Type}} expression {{escapestring (index $.ExpressionMap $element2.ExpressionName).Raw}} for publishing variable {{$element2.VariableName}}. Failure: %v", exerr)
+			} else {
+				logger.logExpressionf("[DEBUG] Evaluating {{escapestring (index $.ExpressionMap $element2.ExpressionName).Type}} expression {{escapestring (index $.ExpressionMap $element2.ExpressionName).Raw}} for publishing variable {{$element2.VariableName}}. Result: %v", var_map["{{$element2.VariableName}}"])
+			}
 			{{end}}
 		}()
 	}
@@ -260,8 +315,15 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interfac
 		func() {
 			defer var_map_mutex.Unlock()
 			var_map_mutex.Lock()
+			var exerr error
+			logger.logExpressionf("[DEBUG] Publishing variables using buckets %v ...", expr_map)
 			{{range $index2, $element2 := $element.PublishList}}
-			var_map["{{$element2.VariableName}}"], _ = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(expr_map)
+			var_map["{{$element2.VariableName}}"], exerr = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(expr_map)
+			if exerr != nil {
+				logger.logExpressionf("[WARN] Evaluating {{escapestring (index $.ExpressionMap $element2.ExpressionName).Type}} expression {{escapestring (index $.ExpressionMap $element2.ExpressionName).Raw}} for publishing variable {{$element2.VariableName}}. Failure: %v", exerr)
+			} else {
+				logger.logExpressionf("[DEBUG] Evaluating {{escapestring (index $.ExpressionMap $element2.ExpressionName).Type}} expression {{escapestring (index $.ExpressionMap $element2.ExpressionName).Raw}} for publishing variable {{$element2.VariableName}}. Result: %v", var_map["{{$element2.VariableName}}"])
+			}
 			{{end}}
 		}()
 	}
@@ -280,8 +342,15 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interfac
 		func() {
 			defer var_map_mutex.RUnlock()
 			var_map_mutex.RLock()
+			logger.logExpressionf("[DEBUG] Evaluating on-error conditionals using buckets %v ...", expr_map)
 			{{range $index2, $element2 := $element.OnErrorList}}
-			eexpr{{$element2.Srno}}, ee{{$element2.Srno}} = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(expr_map){{end}}
+			eexpr{{$element2.Srno}}, ee{{$element2.Srno}} = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(expr_map)
+			if ee{{$element2.Srno}} != nil {
+				logger.logExpressionf("[WARN] Evaluating {{escapestring (index $.ExpressionMap $element2.ExpressionName).Type}} expression {{escapestring (index $.ExpressionMap $element2.ExpressionName).Raw}} for task {{$element2.TaskName}}. Failure: %v", ee{{$element2.Srno}})
+			} else {
+				logger.logExpressionf("[DEBUG] Evaluating {{escapestring (index $.ExpressionMap $element2.ExpressionName).Type}} expression {{escapestring (index $.ExpressionMap $element2.ExpressionName).Raw}} for task {{$element2.TaskName}}. Result: %v", eexpr{{$element2.Srno}})
+			}
+			{{end}}
 		}()
 	}
 	{{end}}
@@ -290,8 +359,15 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interfac
 		func() {
 			defer var_map_mutex.RUnlock()
 			var_map_mutex.RLock()
+			logger.logExpressionf("[DEBUG] Evaluating on-success conditionals using buckets %v ...", expr_map)
 			{{range $index2, $element2 := $element.OnSuccessList}}
-			expr{{$element2.Srno}}, e{{$element2.Srno}} = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(expr_map){{end}}
+			expr{{$element2.Srno}}, e{{$element2.Srno}} = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(expr_map)
+			if ee{{$element2.Srno}} != nil {
+				logger.logExpressionf("[WARN] Evaluating {{escapestring (index $.ExpressionMap $element2.ExpressionName).Type}} expression {{escapestring (index $.ExpressionMap $element2.ExpressionName).Raw}} for task {{$element2.TaskName}}. Failure: %v", e{{$element2.Srno}})
+			} else {
+				logger.logExpressionf("[DEBUG] Evaluating {{escapestring (index $.ExpressionMap $element2.ExpressionName).Type}} expression {{escapestring (index $.ExpressionMap $element2.ExpressionName).Raw}} for task {{$element2.TaskName}}. Result: %v", expr{{$element2.Srno}})
+			}
+			{{end}}
 		}()
 	}
 	{{end}}
@@ -354,7 +430,13 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interfac
 	{{ end }}
 
 	{{range $index2, $element2 := $element.OnCompleteList}}
+	logger.logExpressionf("[DEBUG] Evaluating on-complete conditional using buckets %v ...", expr_map)
 	onc_expr{{$element2.Srno}}, onc_e{{$element2.Srno}} := {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(expr_map)
+	if ee{{$element2.Srno}} != nil {
+		logger.logExpressionf("[WARN] Evaluating {{escapestring (index $.ExpressionMap $element2.ExpressionName).Type}} expression {{escapestring (index $.ExpressionMap $element2.ExpressionName).Raw}} for task {{$element2.TaskName}}. Failure: %v", onc_e{{$element2.Srno}})
+	} else {
+		logger.logExpressionf("[DEBUG] Evaluating {{escapestring (index $.ExpressionMap $element2.ExpressionName).Type}} expression {{escapestring (index $.ExpressionMap $element2.ExpressionName).Raw}} for task {{$element2.TaskName}}. Result: %v", onc_expr{{$element2.Srno}})
+	}
 	if onc_e{{$element2.Srno}} == nil && onc_expr{{$element2.Srno}}.(bool) {
 		{{printf "task_%s__%s" $.OrigSpec.Name $element2.TaskName}}(var_map, var_map_mutex)
 	}
