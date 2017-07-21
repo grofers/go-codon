@@ -1,1 +1,0 @@
-These contain the flow DSL describing the different workflows which can be linked to different views in the swagger spec using the workflow extensions.
