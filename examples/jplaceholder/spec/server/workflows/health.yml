@@ -1,5 +1,0 @@
-name: get_health
-
-output:
-    body: <%jmes `"OK"` %>
-    status_code: <%jmes `200` %>
