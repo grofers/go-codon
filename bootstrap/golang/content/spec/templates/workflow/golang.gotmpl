@@ -17,6 +17,14 @@ import (
 )
 {{end}}
 
+{{range $expr, $expr_obj := .ExpressionMap}}
+{{if eq $expr_obj.Type "jmes"}}var {{$.OrigSpec.Name}}_eval_{{$expr_obj.Srno}} *jmespath.JMESPath{{end}}{{if eq $expr_obj.Type "jngo"}}var {{$.OrigSpec.Name}}_eval_{{$expr_obj.Srno}} *pongo2.Template{{end}}{{end}}
+
+func init() {
+	{{range $expr, $expr_obj := .ExpressionMap}}
+	{{if eq $expr_obj.Type "jmes"}}{{$.OrigSpec.Name}}_eval_{{$expr_obj.Srno}} = jmespath.MustCompile("{{escapestring $expr_obj.Raw}}"){{end}}{{if eq $expr_obj.Type "jngo"}}{{$.OrigSpec.Name}}_eval_{{$expr_obj.Srno}} = pongo2.Must(pongo2.FromString("{{escapestring $expr_obj.Raw}}")){{end}}{{end}}
+}
+
 func {{ pascalize .OrigSpec.Name }}(var_map map[string]interface{}) interface{} {
 	var err interface{}
 	err = nil
@@ -59,9 +67,6 @@ func {{ pascalize .OrigSpec.Name }}(var_map map[string]interface{}) interface{} 
 
 	return ret_map
 }
-
-{{range $expr, $expr_obj := .ExpressionMap}}
-{{if eq $expr_obj.Type "jmes"}}var {{$.OrigSpec.Name}}_eval_{{$expr_obj.Srno}} = jmespath.MustCompile("{{escapestring $expr_obj.Raw}}"){{end}}{{if eq $expr_obj.Type "jngo"}}var {{$.OrigSpec.Name}}_eval_{{$expr_obj.Srno}} = pongo2.Must(pongo2.FromString("{{escapestring $expr_obj.Raw}}")){{end}}{{end}}
 
 {{range $index, $element := .OrigSpec.Tasks}}
 func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interface{}, var_map_mutex *sync.RWMutex) error {
