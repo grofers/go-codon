@@ -26,9 +26,8 @@ func (o *GetMockError) Error() string {
 	return fmt.Sprintf("[GET /{unknown}][%d] %+v", 400, o.Payload)
 }
 
-func (a *Client) GetSuccess(all_params *map[string]interface{}) (*GetMockOK, error) {
-	p := (*all_params)
-	wait, ok := p["wait"]
+func (a *Client) GetSuccess(all_params map[string]interface{}) (*GetMockOK, error) {
+	wait, ok := all_params["wait"]
 	if ok {
 		wait_val, err := conv.Int64(wait)
 		if err != nil {
@@ -36,20 +35,19 @@ func (a *Client) GetSuccess(all_params *map[string]interface{}) (*GetMockOK, err
 		}
 		time.Sleep(time.Duration(wait_val) * time.Millisecond)
 	}
-	delete(p, "wait")
-	delete(p, "_timeout")
+	delete(all_params, "wait")
+	delete(all_params, "_timeout")
 	return &GetMockOK {
-		Payload: p,
+		Payload: all_params,
 	}, nil
 }
 
-func (a *Client) GetFailure(all_params *map[string]interface{}) (*GetMockOK, error) {
+func (a *Client) GetFailure(all_params map[string]interface{}) (*GetMockOK, error) {
 	return nil, errors.New("Mock Error")
 }
 
-func (a *Client) GetFailurePayload(all_params *map[string]interface{}) (*GetMockOK, error) {
-	p := (*all_params)
+func (a *Client) GetFailurePayload(all_params map[string]interface{}) (*GetMockOK, error) {
 	return nil, &GetMockError {
-		Payload: p,
+		Payload: all_params,
 	}
 }

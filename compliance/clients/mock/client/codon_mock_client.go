@@ -5,7 +5,7 @@ import (
 	"github.com/grofers/go-codon/testing/clients/mock/client/operations"
 )
 
-func NewHTTPClientWithConfigMap(formats strfmt.Registry, cfgmap *map[string]string) *CodonMock {
+func NewHTTPClientWithConfigMap(formats strfmt.Registry, cfgmap map[string]string) *CodonMock {
 	return New()
 }
 
