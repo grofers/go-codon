@@ -33,11 +33,17 @@ func configureViews(api *{{.Package}}.{{ pascalize .Name }}API) {
 
     status_code, _ := conv.Int(resp["status_code"])
 
+    headers, headers_ok := resp["headers"]
+    if !headers_ok {
+      headers = map[string]interface{} {}
+    }
+
     switch status_code {
     {{ range .Responses }}case {{.Code}}:
       return &operations.{{ pascalize .Name }}{
         {{ if .Schema }}Payload: resp["body"],
         {{ end }}
+        Headers: *operations.New{{ pascalize .Name }}HeadersFromObj(headers),
       }
     {{ end }}default:
       {{ if .FailResponse }}return &operations.{{ pascalize .FailResponse.Name }}{
