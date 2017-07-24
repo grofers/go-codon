@@ -44,8 +44,8 @@ func DetectFileSpec(path string) int {
 
 
 // Copyright 2015 go-swagger maintainers
-// Use of this source code is governed by Apache License,
-// Version 2.0 that can be found in the LICENSE file.
+// Use of this source code is governed by
+// Apache License, Version 2.0
 // Modified error reporting structure to match go-codon's
 func BaseImport(tgt string) (string, error) {
 	p, err := filepath.Abs(tgt)
