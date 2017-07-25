@@ -34,7 +34,7 @@ func New{{ pascalize .Name }}Params() *{{ pascalize .Name }}Params {
   return &{{ pascalize .Name}}Params{
   {{ range .Params }}{{ if .HasDefault }}{{ pascalize .Name}}: {{ if and (not .IsArray) (not .IsMap) (not .HasDiscriminator) (or .IsNullable  ) }}&{{ end }}{{ varname .ID }}Default,
   {{ end }}{{ end }}
-    {{ camelize .TimeoutName }}: cr.DefaultTimeout,
+    {{ pascalize .TimeoutName }}: cr.DefaultTimeout,
   }
 }
 
@@ -48,7 +48,7 @@ func New{{ pascalize .Name }}ParamsWithTimeout(timeout time.Duration) *{{ pascal
   return &{{ pascalize .Name}}Params{
   {{ range .Params }}{{ if .HasDefault }}{{ pascalize .ID}}: {{ if and (not .IsArray) (not .IsMap) (not .HasDiscriminator) (or .IsNullable  ) }}&{{ end }}{{ varname .ID }}Default,
   {{ end }}{{ end }}
-    {{ camelize .TimeoutName }}: timeout,
+    {{ pascalize .TimeoutName }}: timeout,
   }
 }
 
@@ -85,6 +85,8 @@ func New{{ pascalize .Name }}ParamsFromMap(params map[string]interface{}) (*{{ p
   if err != nil {
     return nil, err
   }
+  // Add millisecond multiplier to timeout
+  retParams.{{ pascalize .TimeoutName }} = retParams.{{ pascalize .TimeoutName }} * time.Millisecond
   return retParams, nil
 }
 
@@ -100,7 +102,7 @@ type {{ pascalize .Name }}Params struct {
   {{ pascalize .ID }} {{ if and (not .IsArray) (not .IsMap) (not .HasDiscriminator) (not .IsInterface) (not .IsStream) (or .IsNullable  ) }}*{{ end }}{{ if not .IsFileParam }}{{ .GoType }}{{ else }}os.File{{end}} `json:{{.Path}}`
   {{ end }}
 
-  {{ camelize .TimeoutName }} time.Duration `json:"_timeout"`
+  {{ pascalize .TimeoutName }} time.Duration `json:"_timeout"`
   Context context.Context `json:"-"`
   HTTPClient *http.Client `json:"-"`
 }
@@ -113,7 +115,7 @@ func ({{ .ReceiverName }} *{{ pascalize .Name }}Params) With{{ pascalize .Timeou
 
 // Set{{ pascalize .TimeoutName }} adds the timeout to the {{ humanize .Name }} params
 func ({{ .ReceiverName }} *{{ pascalize .Name }}Params) Set{{ pascalize .TimeoutName }}(timeout time.Duration) {
-  {{ .ReceiverName }}.{{ camelize .TimeoutName }} = timeout
+  {{ .ReceiverName }}.{{ pascalize .TimeoutName }} = timeout
 }
 
 // WithContext adds the context to the {{ humanize .Name }} params
@@ -154,7 +156,7 @@ func ({{ $.ReceiverName }} *{{ pascalize $.Name }}Params) Set{{ pascalize .ID }}
 // WriteToRequest writes these params to a swagger request
 func ({{ .ReceiverName }} *{{ pascalize .Name }}Params) WriteToRequest(r runtime.ClientRequest, reg strfmt.Registry) error {
 
-  r.SetTimeout({{ .ReceiverName }}.{{ camelize .TimeoutName }})
+  r.SetTimeout({{ .ReceiverName }}.{{ pascalize .TimeoutName }})
   var res []error
   {{range .Params}}
 
