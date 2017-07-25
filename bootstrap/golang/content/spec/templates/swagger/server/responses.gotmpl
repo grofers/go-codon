@@ -4,10 +4,10 @@
 {{ define "simpleserverheaderbuilder" }}
 {{ if .IsNullable -}}
 var {{ varname .ID }} string
-if {{ .ReceiverName }}.{{ pascalize .ID }} != nil {
-  {{ varname .ID }} = {{ if .Formatter }}{{ .Formatter }}(*{{ .ReceiverName }}.{{ pascalize .ID }}){{ else }}{{ if not .IsCustomFormatter }}*{{ end }}{{ .ReceiverName }}.{{ pascalize .ID }}{{ if .IsCustomFormatter }}.String(){{end}}{{end}}
+if {{ .ReceiverName }}.Headers.{{ pascalize .ID }} != nil {
+  {{ varname .ID }} = {{ if .Formatter }}{{ .Formatter }}(*{{ .ReceiverName }}.Headers.{{ pascalize .ID }}){{ else }}{{ if not .IsCustomFormatter }}*{{ end }}{{ .ReceiverName }}.Headers.{{ pascalize .ID }}{{ if .IsCustomFormatter }}.String(){{end}}{{end}}
 }
-{{ else }}{{ varname .ID }} := {{ if .Formatter }}{{ .Formatter }}({{ .ReceiverName }}.{{ pascalize .ID }}){{ else }}{{ .ReceiverName }}.{{ pascalize .ID }}{{ if .IsCustomFormatter }}.String(){{end}}{{end}}
+{{ else }}{{ varname .ID }} := {{ if .Formatter }}{{ .Formatter }}({{ .ReceiverName }}.Headers.{{ pascalize .ID }}){{ else }}{{ .ReceiverName }}.Headers.{{ pascalize .ID }}{{ if .IsCustomFormatter }}.String(){{end}}{{end}}
 {{ end -}}
 if {{ varname .ID }} != "" {
   rw.Header().Set({{ printf "%q" .Name }}, {{ varname .ID }})
@@ -54,14 +54,8 @@ if len({{ .ValueExpression }}S) > 0 {
 {{ if ne .Code -1 }}// HTTP code for type {{ pascalize .Name}}
 const {{ pascalize .Name}}Code int = {{ .Code }}{{ end }}
 
-/*{{ if .Description }}{{ pascalize .Name }} {{ .Description }}{{else}}{{ pascalize .Name }} {{ humanize .Name }}{{end}}
-
-swagger:response {{ camelize .Name }}
-*/
-type {{ pascalize .Name }} struct {
-  {{ if eq .Code -1 }}
-  _statusCode int
-  {{ end }}{{ range .Headers }}/*{{if .Description }}{{ .Description }}{{ end }}{{ if .Required }}
+type {{ pascalize .Name }}Headers struct {
+  {{ range .Headers }}/*{{if .Description }}{{ .Description }}{{ end }}{{ if .Required }}
   Required: true{{ end }}{{ if .Maximum }}
   Maximum: {{ if .ExclusiveMaximum }}< {{ end }}{{ .Maximum }}{{ end }}{{ if .Minimum }}
   Minimum: {{ if .ExclusiveMinimum }}> {{ end }}{{ .Minimum }}{{ end }}{{ if .MultipleOf }}
@@ -75,6 +69,16 @@ type {{ pascalize .Name }} struct {
   Default: {{ printf "%#v" .Default }}{{ end }}
   */
   {{ pascalize .Name }} {{ .GoType }} `json:"{{.Name}}{{ if not .Required }},omitempty{{ end }}"`
+  {{ end }}
+}
+
+/*{{ if .Description }}{{ pascalize .Name }} {{ .Description }}{{else}}{{ pascalize .Name }} {{ humanize .Name }}{{end}}
+
+swagger:response {{ camelize .Name }}
+*/
+type {{ pascalize .Name }} struct {
+  {{ if eq .Code -1 }}
+  _statusCode int
   {{ end }}
   {{ if .Schema }}{{ with .Schema }}
   /*{{if .Description }}{{ .Description }}{{ end }}{{ if .Maximum }}
@@ -91,6 +95,21 @@ type {{ pascalize .Name }} struct {
   */{{ end }}
   Payload {{ if and (not .Schema.IsBaseType) .Schema.IsComplexObject }}*{{ end }}{{ .Schema.GoType }} `json:"body,omitempty"`
   {{ end }}
+  Headers {{ pascalize .Name }}Headers `json:"headers,omitempty"`
+}
+
+// New{{ pascalize .Name }}Headers creates  {{ pascalize .Name }}Headers with default headers
+func New{{ pascalize .Name }}Headers() *{{ pascalize .Name }}Headers {
+  return &{{ pascalize .Name }}Headers {
+    {{ range .Headers }}{{ if .HasDefault }}{{ pascalize .Name }}: {{ printf "%#v" .Default }},{{ end }}
+  {{ end }}}
+}
+
+// New{{ pascalize .Name }}HeadersFromObj creates {{ pascalize .Name }}Headers from a map or struct with defaults
+func New{{ pascalize .Name }}HeadersFromObj(headers_obj interface{}) *{{ pascalize .Name }}Headers {
+  headers := New{{ pascalize .Name }}Headers()
+  codon_ms.Decode(headers_obj, headers)
+  return headers
 }
 
 // New{{ pascalize .Name }} creates {{ pascalize .Name }} with default headers values
@@ -101,8 +120,8 @@ func New{{ pascalize .Name }}({{ if eq .Code -1 }}code int{{ end }}) *{{ pascali
 {{ end }}
   return &{{ pascalize .Name }}{
     {{ if eq .Code -1 }}_statusCode: code,
-    {{ end }}{{ range .Headers }}{{ if .HasDefault }}{{ pascalize .Name }}: {{ printf "%#v" .Default }},{{ end }}
-  {{ end }}}
+    {{ end }}Headers: *New{{ pascalize .Name }}Headers(),
+  }
 }
 
 {{ if eq .Code -1 }}
@@ -119,13 +138,13 @@ func ({{ .ReceiverName }} *{{ pascalize .Name }}) SetStatusCode(code int) {
 {{ end }}{{ range .Headers }}
 // With{{ pascalize .Name }} adds the {{ camelize .Name  }} to the {{ humanize $.Name }} response
 func ({{ $.ReceiverName }} *{{ pascalize $.Name }}) With{{ pascalize .Name }}({{ varname .Name  }} {{ .GoType}}) *{{ pascalize $.Name }} {
-  {{ $.ReceiverName }}.{{ pascalize .Name }} = {{ varname .Name  }}
+  {{ $.ReceiverName }}.Headers.{{ pascalize .Name }} = {{ varname .Name  }}
   return {{ .ReceiverName }}
 }
 
 // Set{{ pascalize .Name }} sets the {{ camelize .Name  }} to the {{ humanize $.Name }} response
 func ({{ $.ReceiverName }} *{{ pascalize $.Name }}) Set{{ pascalize .Name }}({{ varname .Name  }} {{ .GoType}}) {
-  {{ $.ReceiverName }}.{{ pascalize .Name }} = {{ varname .Name  }}
+  {{ $.ReceiverName }}.Headers.{{ pascalize .Name }} = {{ varname .Name  }}
 }
 {{ end }}{{ if .Schema }}
 // WithPayload adds the payload to the {{ humanize .Name }} response
@@ -186,6 +205,7 @@ import (
   {{ range $key, $value := .Imports }}{{ $key }} {{ printf "%q" $value }}
   {{ end }}
   "github.com/grofers/go-codon/runtime/templates"
+  codon_ms "github.com/grofers/go-codon/runtime/mapstructure"
 )
 
 {{ range .Responses }}
