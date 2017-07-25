@@ -73,6 +73,9 @@ func NewHTTPClientWithConfig(formats strfmt.Registry, cfg *TransportConfig) *{{ 
   // Hack to make html work
   transport.Consumers["text/html"] = runtime.TextConsumer()
   transport.Producers["text/html"] = runtime.TextProducer()
+  // Hack to make forms work. This absurd todo needs to be resolved: https://github.com/go-openapi/runtime/issues/31
+  transport.Consumers["application/x-www-form-urlencoded"] = runtime.DiscardConsumer
+  transport.Producers["application/x-www-form-urlencoded"] = runtime.DiscardProducer
   return New(transport, formats)
 }
 
