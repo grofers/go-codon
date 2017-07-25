@@ -94,8 +94,8 @@ type {{ pascalize .Name }} struct {
   In: Body
   */{{ end }}
   Payload {{ if and (not .Schema.IsBaseType) .Schema.IsComplexObject }}*{{ end }}{{ .Schema.GoType }} `json:"body,omitempty"`
-  Headers {{ pascalize .Name }}Headers `json:"headers,omitempty"`
   {{ end }}
+  Headers {{ pascalize .Name }}Headers `json:"headers,omitempty"`
 }
 
 // New{{ pascalize .Name }}Headers creates  {{ pascalize .Name }}Headers with default headers
