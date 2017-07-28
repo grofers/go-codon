@@ -52,7 +52,7 @@ type Task struct {
 	OnSuccessList		[]TodoObj				`yaml:"-"`
 	OnComplete			[]map[string]string		`yaml:"on-complete"`
 	OnCompleteList		[]TodoObj				`yaml:"-"`
-	Timeout				int64					`yaml:"timeout"`
+	Timeout				string					`yaml:"timeout"`
 	WithItems			string					`yaml:"with-items"`
 	Loop				LoopInfo				`yaml:"loop"`
 }
@@ -291,6 +291,13 @@ func (s *Spec) getExpressionMap() (map[string]Expression, error) {
 				if err != nil {
 					return nil, err
 				}
+			}
+		}
+		if task.Timeout != "" {
+			expr := task.Timeout
+			err := s.appendExpression(all_exprs, &expr, &counter)
+			if err != nil {
+				return nil, err
 			}
 		}
 	}

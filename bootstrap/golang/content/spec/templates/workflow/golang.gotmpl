@@ -87,7 +87,7 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interfac
 		arg_map["{{$index2}}"], _ = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2).Srno }}(expr_map){{end}}
 	}()
 	{{end}}
-	{{if $element.Timeout}}arg_map["_timeout"] = int64({{$element.Timeout}}){{end}}
+	{{if $element.Timeout}}arg_map["_timeout"] = maybe({{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element.Timeout).Srno }}(expr_map)){{end}}
 
 	{{ if eq (index $.ActionMap $element.Action).Type "clients" }}
 	log.Println("[DEBUG] Sending a request to {{ (index $.ActionMap $element.Action).Pascalized }} API")
