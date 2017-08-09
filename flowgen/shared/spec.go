@@ -450,10 +450,14 @@ func (s *Spec) processExpression(expr string) (Expression, error) {
 				return Expression{}, err
 			}
 		case "jngo":
-			_, err := pongo2.FromString(ret_expr.Raw)
-			if err != nil {
-				return Expression{}, err
-			}
+			// Disabling pongo2 validity test. pongo2 does not allow parsing
+			// unknown filters which are registered in the generated project.
+			// TODO: Add missing filters before performing validity check?
+			pongo2.FromString(ret_expr.Raw)
+			// _, err := pongo2.FromString(ret_expr.Raw)
+			// if err != nil {
+			// 	return Expression{}, err
+			// }
 		default:
 			return Expression{}, fmt.Errorf("Expression of this type is not supported: %v", expr)
 		}
