@@ -26,8 +26,13 @@ func init() {
 }
 
 type {{printf "%s_data" $.OrigSpec.Name }} struct {
-	var_map			map[string]interface{}
-	var_map_mutex	sync.RWMutex
+	var_map map[string]interface{}
+	var_map_mutex sync.RWMutex
+	{{range $index, $element := $.OrigSpec.Tasks}}
+	{{if gt $element.Join 0}}
+	{{printf "%s__jc" $index}} joincoordinator
+	{{end}}
+	{{end}}
 }
 
 func {{ pascalize .OrigSpec.Name }}(var_map map[string]interface{}) interface{} {
@@ -79,6 +84,12 @@ func {{ pascalize .OrigSpec.Name }}(var_map map[string]interface{}) interface{} 
 
 {{range $index, $element := .OrigSpec.Tasks}}
 func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(flow_data *{{printf "%s_data" $.OrigSpec.Name }}) error {
+	{{if gt $element.Join 0}}
+	defer flow_data.{{printf "%s__jc" $index}}.fin_mutex.Unlock()
+	if flow_data.{{printf "%s__jc" $index}}.execute({{$element.Join}}) {
+		return nil
+	}
+	{{end}}
 	expr_map := make(map[string]interface{})
 	expr_map["main"] = flow_data.var_map
 	expr_map["constants"] = config.YmlConfig.Constants
