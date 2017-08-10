@@ -35,6 +35,7 @@ type Spec struct {
 }
 
 type Task struct {
+	Join				int						`yaml:"join"`
 	Action				string					`yaml:"action"`
 	Input				map[string]string		`yaml:"input"`
 	PublishRaw			interface{}				`yaml:"publish"`

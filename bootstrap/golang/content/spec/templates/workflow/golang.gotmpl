@@ -25,13 +25,27 @@ func init() {
 	{{if eq $expr_obj.Type "jmes"}}{{$.OrigSpec.Name}}_eval_{{$expr_obj.Srno}} = jmespath.MustCompile("{{escapestring $expr_obj.Raw}}"){{end}}{{if eq $expr_obj.Type "jngo"}}{{$.OrigSpec.Name}}_eval_{{$expr_obj.Srno}} = pongo2.Must(pongo2.FromString("{{escapestring $expr_obj.Raw}}")){{end}}{{end}}
 }
 
+type {{printf "%s_data" $.OrigSpec.Name }} struct {
+	var_map map[string]interface{}
+	var_map_mutex sync.RWMutex
+	{{range $index, $element := $.OrigSpec.Tasks}}
+	{{if gt $element.Join 0}}
+	{{printf "%s__jc" $index}} joincoordinator
+	{{end}}
+	{{end}}
+}
+
 func {{ pascalize .OrigSpec.Name }}(var_map map[string]interface{}) interface{} {
 	var err interface{}
 	err = nil
 
-	var var_map_mutex = &sync.RWMutex{}
+	flow_data := &{{printf "%s_data" $.OrigSpec.Name }}{
+		var_map: var_map,
+		var_map_mutex: sync.RWMutex{},
+	}
+
 	{{ if eq (len .OrigSpec.Start) 1 }}
-	{{printf "task_%s__%s" $.OrigSpec.Name (index $.OrigSpec.Start 0)}}(var_map, var_map_mutex)
+	{{printf "task_%s__%s" $.OrigSpec.Name (index $.OrigSpec.Start 0)}}(flow_data)
 	{{ else if gt (len .OrigSpec.Start) 1 }}
 	var wg sync.WaitGroup
 	wg.Add({{len .OrigSpec.Start}})
@@ -43,7 +57,7 @@ func {{ pascalize .OrigSpec.Name }}(var_map map[string]interface{}) interface{} 
 			}
 			wg.Done()
 		}()
-		{{printf "task_%s__%s" $.OrigSpec.Name $element}}(var_map, var_map_mutex)
+		{{printf "task_%s__%s" $.OrigSpec.Name $element}}(flow_data)
 	}()
 	{{ end }}
 	wg.Wait()
@@ -54,11 +68,11 @@ func {{ pascalize .OrigSpec.Name }}(var_map map[string]interface{}) interface{} 
 	}
 
 	expr_map := make(map[string]interface{})
-	expr_map["main"] = var_map
+	expr_map["main"] = flow_data.var_map
 	expr_map["constants"] = config.YmlConfig.Constants
 
-	defer var_map_mutex.RUnlock()
-	var_map_mutex.RLock()
+	defer flow_data.var_map_mutex.RUnlock()
+	flow_data.var_map_mutex.RLock()
 	{{if eq .LanguageSpec.OutputObj.Type "map"}}
 	ret_map := {{template "outputmapexpander" .LanguageSpec.OutputObj}}
 	{{else}}
@@ -69,9 +83,15 @@ func {{ pascalize .OrigSpec.Name }}(var_map map[string]interface{}) interface{} 
 }
 
 {{range $index, $element := .OrigSpec.Tasks}}
-func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interface{}, var_map_mutex *sync.RWMutex) error {
+func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(flow_data *{{printf "%s_data" $.OrigSpec.Name }}) error {
+	{{if gt $element.Join 0}}
+	defer flow_data.{{printf "%s__jc" $index}}.fin_mutex.Unlock()
+	if flow_data.{{printf "%s__jc" $index}}.execute({{$element.Join}}) {
+		return nil
+	}
+	{{end}}
 	expr_map := make(map[string]interface{})
-	expr_map["main"] = var_map
+	expr_map["main"] = flow_data.var_map
 	expr_map["constants"] = config.YmlConfig.Constants
 
 	var err error
@@ -81,8 +101,8 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interfac
 	arg_map := make(map[string]interface{})
 	{{if gt (len $element.Input) 0}}
 	func() {
-		defer var_map_mutex.RUnlock()
-		var_map_mutex.RLock()
+		defer flow_data.var_map_mutex.RUnlock()
+		flow_data.var_map_mutex.RLock()
 		{{range $index2, $element2 := $element.Input}}
 		arg_map["{{$index2}}"], _ = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2).Srno }}(expr_map){{end}}
 	}()
@@ -115,8 +135,8 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interfac
 	err_objs := []*error {}
 
 	func() {
-		defer var_map_mutex.RUnlock()
-		var_map_mutex.RLock()
+		defer flow_data.var_map_mutex.RUnlock()
+		flow_data.var_map_mutex.RLock()
 		iterlist_interface, err = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element.WithItems).Srno }}(expr_map)
 	}()
 
@@ -139,11 +159,10 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interfac
 			var nil_err error
 			var err_obj *error
 			err_obj = &nil_err
-			new_var_map_mutex := &sync.RWMutex{}
 			{{if gt (len $element.Loop.Input) 0}}
 			func() {
-				defer var_map_mutex.RUnlock()
-				var_map_mutex.RLock()
+				defer flow_data.var_map_mutex.RUnlock()
+				flow_data.var_map_mutex.RLock()
 				{{range $index2, $element2 := $element.Loop.Input}}
 				new_var_map["{{$index2}}"], _ = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2).Srno }}(expr_map){{end}}
 			}()
@@ -165,7 +184,10 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interfac
 					}
 					wg.Done()
 				}()
-				terr = {{printf "task_%s__%s" $.OrigSpec.Name $element.Loop.TaskName}}(new_var_map, new_var_map_mutex)
+				terr = {{printf "task_%s__%s" $.OrigSpec.Name $element.Loop.TaskName}}(&{{printf "%s_data" $.OrigSpec.Name }} {
+					var_map: new_var_map,
+					var_map_mutex: sync.RWMutex{},
+				})
 			}()
 		}
 		expr_map["item"] = nil
@@ -201,10 +223,10 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interfac
 	{{ if $element.WithItems }}
 	{{ if $element.Loop.ErrorPublishList }}
 	func() {
-		defer var_map_mutex.Unlock()
-		var_map_mutex.Lock()
+		defer flow_data.var_map_mutex.Unlock()
+		flow_data.var_map_mutex.Lock()
 		{{range $index2, $element2 := $element.Loop.ErrorPublishList}}
-		var_map["{{$element2.VariableName}}"] = []interface{}{}
+		flow_data.var_map["{{$element2.VariableName}}"] = []interface{}{}
 		{{end}}
 		for index, element := range iterlist {
 			expr_map["item"] = element
@@ -222,17 +244,17 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interfac
 				}
 			}
 			{{range $index2, $element2 := $element.Loop.ErrorPublishList}}
-			var_map["{{$element2.VariableName}}"] = append(var_map["{{$element2.VariableName}}"].([]interface{}), maybe({{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(expr_map)))
+			flow_data.var_map["{{$element2.VariableName}}"] = append(flow_data.var_map["{{$element2.VariableName}}"].([]interface{}), maybe({{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(expr_map)))
 			{{end}}
 		}
 	}()
 	{{ end }}
 	{{ if $element.Loop.PublishList }}
 	func() {
-		defer var_map_mutex.Unlock()
-		var_map_mutex.Lock()
+		defer flow_data.var_map_mutex.Unlock()
+		flow_data.var_map_mutex.Lock()
 		{{range $index2, $element2 := $element.Loop.PublishList}}
-		var_map["{{$element2.VariableName}}"] = []interface{}{}
+		flow_data.var_map["{{$element2.VariableName}}"] = []interface{}{}
 		{{end}}
 		for index, element := range iterlist {
 			expr_map["item"] = element
@@ -243,7 +265,7 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interfac
 				expr_map["task"] = nil
 			}
 			{{range $index2, $element2 := $element.Loop.PublishList}}
-			var_map["{{$element2.VariableName}}"] = append(var_map["{{$element2.VariableName}}"].([]interface{}), maybe({{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(expr_map)))
+			flow_data.var_map["{{$element2.VariableName}}"] = append(flow_data.var_map["{{$element2.VariableName}}"].([]interface{}), maybe({{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(expr_map)))
 			{{end}}
 		}
 	}()
@@ -252,10 +274,10 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interfac
 	{{if gt (len $element.ErrorPublishList) 0}}
 	if is_error {
 		func() {
-			defer var_map_mutex.Unlock()
-			var_map_mutex.Lock()
+			defer flow_data.var_map_mutex.Unlock()
+			flow_data.var_map_mutex.Lock()
 			{{range $index2, $element2 := $element.ErrorPublishList}}
-			var_map["{{$element2.VariableName}}"], _ = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(expr_map)
+			flow_data.var_map["{{$element2.VariableName}}"], _ = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(expr_map)
 			{{end}}
 		}()
 	}
@@ -263,10 +285,10 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interfac
 	{{if gt (len $element.PublishList) 0}}
 	if !is_error {
 		func() {
-			defer var_map_mutex.Unlock()
-			var_map_mutex.Lock()
+			defer flow_data.var_map_mutex.Unlock()
+			flow_data.var_map_mutex.Lock()
 			{{range $index2, $element2 := $element.PublishList}}
-			var_map["{{$element2.VariableName}}"], _ = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(expr_map)
+			flow_data.var_map["{{$element2.VariableName}}"], _ = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(expr_map)
 			{{end}}
 		}()
 	}
@@ -283,8 +305,8 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interfac
 	{{if gt (len $element.OnErrorList) 0}}
 	if is_error {
 		func() {
-			defer var_map_mutex.RUnlock()
-			var_map_mutex.RLock()
+			defer flow_data.var_map_mutex.RUnlock()
+			flow_data.var_map_mutex.RLock()
 			{{range $index2, $element2 := $element.OnErrorList}}
 			eexpr{{$element2.Srno}}, ee{{$element2.Srno}} = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(expr_map){{end}}
 		}()
@@ -293,8 +315,8 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interfac
 	{{if gt (len $element.OnSuccessList) 0}}
 	if !is_error {
 		func() {
-			defer var_map_mutex.RUnlock()
-			var_map_mutex.RLock()
+			defer flow_data.var_map_mutex.RUnlock()
+			flow_data.var_map_mutex.RLock()
 			{{range $index2, $element2 := $element.OnSuccessList}}
 			expr{{$element2.Srno}}, e{{$element2.Srno}} = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(expr_map){{end}}
 		}()
@@ -305,7 +327,7 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interfac
 	if is_error {
 		{{if eq (len $element.OnErrorList) 1}}
 		if ee1 == nil && eexpr1.(bool) {
-			{{printf "task_%s__%s" $.OrigSpec.Name (index $element.OnErrorList 0).TaskName}}(var_map, var_map_mutex)
+			{{printf "task_%s__%s" $.OrigSpec.Name (index $element.OnErrorList 0).TaskName}}(flow_data)
 		}
 		{{else if gt (len $element.OnErrorList) 1}}
 		var wg sync.WaitGroup
@@ -321,7 +343,7 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interfac
 					}
 					wg.Done()
 				}()
-				{{printf "task_%s__%s" $.OrigSpec.Name $element2.TaskName}}(var_map, var_map_mutex)
+				{{printf "task_%s__%s" $.OrigSpec.Name $element2.TaskName}}(flow_data)
 			}()
 		}
 		{{end}}
@@ -333,7 +355,7 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interfac
 	if !is_error {
 		{{if eq (len $element.OnSuccessList) 1}}
 		if e1 == nil && expr1.(bool) {
-			{{printf "task_%s__%s" $.OrigSpec.Name (index $element.OnSuccessList 0).TaskName}}(var_map, var_map_mutex)
+			{{printf "task_%s__%s" $.OrigSpec.Name (index $element.OnSuccessList 0).TaskName}}(flow_data)
 		}
 		{{else if gt (len $element.OnSuccessList) 1}}
 		var wg sync.WaitGroup
@@ -349,7 +371,7 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interfac
 					}
 					wg.Done()
 				}()
-				{{printf "task_%s__%s" $.OrigSpec.Name $element2.TaskName}}(var_map, var_map_mutex)
+				{{printf "task_%s__%s" $.OrigSpec.Name $element2.TaskName}}(flow_data)
 			}()
 		}
 		{{end}}
@@ -361,16 +383,16 @@ func {{printf "task_%s__%s" $.OrigSpec.Name $index}}(var_map map[string]interfac
 	{{range $index2, $element2 := $element.OnCompleteList}}
 	onc_expr{{$element2.Srno}}, onc_e{{$element2.Srno}} := {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(expr_map)
 	if onc_e{{$element2.Srno}} == nil && onc_expr{{$element2.Srno}}.(bool) {
-		{{printf "task_%s__%s" $.OrigSpec.Name $element2.TaskName}}(var_map, var_map_mutex)
+		{{printf "task_%s__%s" $.OrigSpec.Name $element2.TaskName}}(flow_data)
 	}
 	{{end}}
 
 	{{if gt (len $element.CompletePublishList) 0}}
 	func() {
-		defer var_map_mutex.Unlock()
-		var_map_mutex.Lock()
+		defer flow_data.var_map_mutex.Unlock()
+		flow_data.var_map_mutex.Lock()
 		{{range $index2, $element2 := $element.CompletePublishList}}
-		var_map["{{$element2.VariableName}}"], _ = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(expr_map)
+		flow_data.var_map["{{$element2.VariableName}}"], _ = {{$.OrigSpec.Name}}_expr_{{ (index $.ExpressionMap $element2.ExpressionName).Srno }}(expr_map)
 		{{end}}
 	}()
 	{{end}}

@@ -2,7 +2,53 @@ package workflows
 
 import (
 	"reflect"
+	"sync"
 )
+
+type joincoordinator struct {
+	// WaitGroup used to wait for all joins
+	wg			sync.WaitGroup
+	// Mutex used to coordinate wg initialization
+	mutex		sync.RWMutex
+	// Mutex used to coordinate task syncronization
+	fin_mutex	sync.RWMutex
+	// Mark wg as initialized
+	initialized	bool
+	// Mark join as claimed by a task
+	// Only one task may claim to be the executor after join
+	claimed		bool
+}
+
+func (jc *joincoordinator) execute(num int) bool {
+	func () {
+		defer jc.mutex.Unlock()
+		jc.mutex.Lock()
+		if !jc.initialized {
+			jc.wg.Add(num)
+			jc.initialized = true
+		}
+	}()
+
+	join_to_exit := false
+	func () {
+		jc.wg.Done()
+		jc.wg.Wait()
+		defer jc.mutex.Unlock()
+		jc.mutex.Lock()
+		if jc.claimed {
+			join_to_exit = true
+			return
+		} else {
+			jc.fin_mutex.Lock()
+		}
+		jc.claimed = true
+	}()
+	if join_to_exit {
+		jc.fin_mutex.Lock()
+		return true
+	}
+	return false
+}
 
 func maybe(obj interface{}, err error) interface{} {
 	if err != nil {
