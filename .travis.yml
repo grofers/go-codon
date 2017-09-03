@@ -1,23 +1,26 @@
 language: go
 go:
-  - 1.8
-  - master
-
+- 1.8
+- master
 os:
-  - linux
-
+- linux
 before_install:
-  - sudo add-apt-repository ppa:masterminds/glide -y
-  - sudo apt-get update -q
-  - sudo apt-get install glide -y
-  - git config --global url."https://github.com/".insteadOf 'git@github.com:'
-
+- sudo add-apt-repository ppa:masterminds/glide -y
+- sudo apt-get update -q
+- sudo apt-get install glide -y
+- git config --global url."https://github.com/".insteadOf 'git@github.com:'
 install:
-  - export GOBIN="$GOPATH/bin"
-  - export PATH="$PATH:$GOBIN"
-  - make install
-
+- export GOBIN="$GOPATH/bin"
+- export PATH="$PATH:$GOBIN"
+- make install
 script:
-  - export GOBIN="$GOPATH/bin"
-  - export PATH="$PATH:$GOBIN"
-  - make test
+- export GOBIN="$GOPATH/bin"
+- export PATH="$PATH:$GOBIN"
+- make test
+deploy:
+  provider: releases
+  api_key:
+    secure: U/HyN99nFLGM0ddYMUkQNXBUClzJqFB/Sxfjz3m1T/r7R0/U/QiyZfe5vHJjGQ5yqMFvtgin0wDWNVVJ5diQ4f4fGKde9uneg6Uuvf46LsMCJtlHQjAwdXIpHtB1TW+KJvVp7t+py14y0iqR1GxSxQ4Z0eQfbME5sS8t0kQg3m0AFz59i2iGTJQTHky1D7NvfFoR4cghSE/9jYNTDqliQ41Fn5J8d3rpb1VLf821ndxV2MBLb3P1d/Pro/O6meZ0DeRbDn5iIiZ1GefLuyCiklTfm+j1bLlWUClWZhOUay1XKG90Xn/GNaKlu05gnfU+Vcrm2VrMHo1kQ76eQalmpQbWH35vPt3b51Upn62F/x/GnqZhlBU7OZWqlNjbmTwYYrZdCMTaRVX0OqsdbaBFaN98hQ0+oTd2pCptFWaQa10X5KoZAIvuT8K5UrPba+IQeEYVCfxgdmnzZmee0rWk4+kTjidVVUu5r3G3f7+EUK5vyHE9TKm9FoWQ+bznt+Epd4GaCu6A7B9aY8ucX4wXoVnT9pOGedm1GnYknjbuIWDiVWOGVNIGg4eQkcb7PMgl5HqZylSWyo4FrtkL9KZcJo3Rf7L1yCW5386OQrjy8chks2u4f5yljzlRQLQyOGIZwPss3XEtriWEKd83iZ/va+chRie7aNPShnzX+apwcLM=
+  file: "$GOBIN/codon"
+  on:
+    repo: grofers/go-codon
