@@ -1,6 +1,8 @@
 # go-codon
 Generates Go server code from a combination of REST and Workflow DSLs.
 
+[![Build Status](https://travis-ci.org/grofers/go-codon.svg?branch=master)](https://travis-ci.org/grofers/go-codon)
+
 A codon service has three components:
 - `Server`: Accepts and validates HTTP requests
 - `Clients`: Clients for upstream services which this service consumes

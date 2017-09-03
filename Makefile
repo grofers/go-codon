@@ -6,6 +6,9 @@ installdependencies:
 	go get golang.org/x/net/context
 	go get golang.org/x/net/context/ctxhttp
 
+installtestdependencies:
+	go get github.com/stretchr/testify/assert
+
 igenerate:
 	go generate
 
@@ -25,6 +28,6 @@ install: clean installdependencies igenerate iinstall
 itest:
 	./scripts/tests.sh
 
-test: install itest
+test: install installtestdependencies itest
 
 .PHONY: installdependencies clean

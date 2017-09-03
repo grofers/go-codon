@@ -1,0 +1,23 @@
+language: go
+go:
+  - 1.8
+  - master
+
+os:
+  - linux
+
+before_install:
+  - sudo add-apt-repository ppa:masterminds/glide -y
+  - sudo apt-get update -q
+  - sudo apt-get install glide -y
+  - git config --global url."https://github.com/".insteadOf 'git@github.com:'
+
+install:
+  - export GOBIN="$GOPATH/bin"
+  - export PATH="$PATH:$GOBIN"
+  - make install
+
+script:
+  - export GOBIN="$GOPATH/bin"
+  - export PATH="$PATH:$GOBIN"
+  - make test
