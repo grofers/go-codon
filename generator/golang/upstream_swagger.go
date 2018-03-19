@@ -10,7 +10,7 @@ import (
 	shared "github.com/grofers/go-codon/shared"
 )
 
-func GenerateUpstreamSwagger(gen *generator) bool {
+func GenerateUpstreamSwagger(gen generator) bool {
 	gen.CurrentAPIName = strings.TrimSuffix(gen.CurrentSpecFile, ".yml")
 	gen.CurrentAPIName = strings.TrimSuffix(gen.CurrentAPIName, ".yaml")
 

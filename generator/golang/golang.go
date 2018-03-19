@@ -23,26 +23,26 @@ import (
 // While go randomizes iteration results, template does not.
 // So we let template ensure idiomatic (and sorted) results.
 type generator struct {
-	CurrentSpecFile string
-	CurrentSpecFilePath string
-	CurrentAPIName string
-	CurrentDirTarget string
-	CurrentDirPath string
-	CurrentDirName string
-	ProjectName string
-	ClientImports map[string]string
-	ClientEndpoints map[string]map[string]string
-	ClientsUsed map[string]bool
+	CurrentSpecFile       string
+	CurrentSpecFilePath   string
+	CurrentAPIName        string
+	CurrentDirTarget      string
+	CurrentDirPath        string
+	CurrentDirName        string
+	ProjectName           string
+	ClientImports         map[string]string
+	ClientEndpoints       map[string]map[string]string
+	ClientsUsed           map[string]bool
 	ClientEndpointGoNames map[string]string
-	WorkflowsBasePath string
+	WorkflowsBasePath     string
 }
 
-var upstream_generator_list = map[int]func(*generator)bool {
+var upstream_generator_list = map[int]func(*generator) bool{
 	codon_shared.SWAGGER: GenerateUpstreamSwagger,
 	codon_shared.UNKNOWN: GenerateUnknown,
 }
 
-var service_generator_list = map[int]func(*generator)bool {
+var service_generator_list = map[int]func(*generator) bool{
 	codon_shared.SWAGGER: GenerateServiceSwagger,
 	codon_shared.UNKNOWN: GenerateUnknown,
 }
@@ -85,7 +85,7 @@ func (gen *generator) process_templates() error {
 
 		var new_asset_path string
 		if strings.HasSuffix(asset, ".gofile") {
-			new_asset_path = filepath.Join(gen.CurrentDirPath, strings.TrimSuffix(asset, ".gofile") + ".go")
+			new_asset_path = filepath.Join(gen.CurrentDirPath, strings.TrimSuffix(asset, ".gofile")+".go")
 		} else {
 			new_asset_path = filepath.Join(gen.CurrentDirPath, asset)
 		}
@@ -143,7 +143,7 @@ func (gen *generator) GenerateDynamic() bool {
 	return true
 }
 
-func (gen *generator) GenerateUpstream() bool {
+func (gen generator) GenerateUpstream() bool {
 	// Get list of all the files in spec/clients
 	files, err := ioutil.ReadDir("spec/clients")
 	if err != nil {
@@ -151,21 +151,40 @@ func (gen *generator) GenerateUpstream() bool {
 		return false
 	}
 
+    var wg sync.WaitGroup
+	wg.Add(len(files))
+
+	var retvals []bool
+
 	for _, file := range files {
-		gen.CurrentSpecFile = file.Name()
-		gen.CurrentSpecFilePath = filepath.Join("spec/clients", file.Name())
-		log.Println("Processing upstream spec: ", file.Name())
-		if file.IsDir() {
-			log.Println(file.Name(), "is a directory. Ignoring.")
-			continue
-		}
-		spec_type := codon_shared.DetectFileSpec(gen.CurrentSpecFilePath)
-		gen_func := upstream_generator_list[spec_type]
-		if ok := gen_func(gen); !ok {
-			log.Println("Failed to generate code for spec", file.Name())
+		go func(file os.FileInfo, wg *sync.WaitGroup, gen generator) {
+            defer wg.Done()
+
+            gen.CurrentSpecFile = file.Name()
+            gen.CurrentSpecFilePath = filepath.Join("spec/clients", file.Name())
+            log.Println("Processing upstream spec: ", file.Name())
+
+            if file.IsDir() {
+                log.Println(file.Name(), "is a directory. Ignoring.")
+                return
+            }
+
+            spec_type := codon_shared.DetectFileSpec(gen.CurrentSpecFilePath)
+            gen_func := upstream_generator_list[spec_type]
+            if ok := gen_func(gen); !ok {
+                log.Println("Failed to generate code for spec", file.Name())
+				retvals = append(retvals, false)
+            }
+        }(file, &wg, gen)
+	}
+    wg.Wait()
+
+	for _, rv := range retvals {
+		if !rv {
 			return false
 		}
 	}
+
 	return true
 }
 
