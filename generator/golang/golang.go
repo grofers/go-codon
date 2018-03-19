@@ -7,6 +7,7 @@ import (
 	"strings"
 	"io/ioutil"
 	"path/filepath"
+    "sync"
 	"text/template"
 	imports "golang.org/x/tools/imports"
 
@@ -37,12 +38,12 @@ type generator struct {
 	WorkflowsBasePath     string
 }
 
-var upstream_generator_list = map[int]func(*generator) bool{
+var upstream_generator_list = map[int]func(generator) bool{
 	codon_shared.SWAGGER: GenerateUpstreamSwagger,
 	codon_shared.UNKNOWN: GenerateUnknown,
 }
 
-var service_generator_list = map[int]func(*generator) bool{
+var service_generator_list = map[int]func(generator) bool{
 	codon_shared.SWAGGER: GenerateServiceSwagger,
 	codon_shared.UNKNOWN: GenerateUnknown,
 }
@@ -128,7 +129,7 @@ func (gen *generator) process_config() error {
 	return nil
 }
 
-func GenerateUnknown(gen *generator) bool {
+func GenerateUnknown(gen generator) bool {
 	log.Println("Ignoring unknown file format for:", gen.CurrentSpecFile)
 	return true
 }
@@ -200,7 +201,7 @@ func (gen *generator) GenerateContent() bool {
 	return true
 }
 
-func (gen *generator) GenerateService() bool {
+func (gen generator) GenerateService() bool {
 	spec_type := codon_shared.DetectFileSpec("spec/server/main.yml")
 	gen_func := service_generator_list[spec_type]
 	if ok := gen_func(gen); !ok {

@@ -56,7 +56,7 @@ func GenerateUpstreamSwagger(gen generator) bool {
 	return true
 }
 
-func GenerateServiceSwagger(gen *generator) bool {
+func GenerateServiceSwagger(gen generator) bool {
 	// swagger generate server -f spec/server/main.yml -t server -T spec/templates/swagger/
 	gen.CurrentDirTarget = "server"
 	gen.CurrentSpecFilePath = "spec/server/main.yml"
