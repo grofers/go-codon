@@ -49,7 +49,7 @@ imports:
   repo: https://github.com/go-openapi/validate
 - name: github.com/go-swagger/go-swagger
   version: 0925bd9bdbce8c826211a417b520e203744dca63
-  repo: git@github.com:grofers/go-swagger.git
+  repo: git://github.com/grofers/go-swagger.git
   subpackages:
   - generator
 - name: github.com/hashicorp/hcl
@@ -67,7 +67,7 @@ imports:
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/jmespath/go-jmespath
   version: 00188b135398219b940eafb0c41bd5ade35490e8
-  repo: git@github.com:grofers/go-jmespath.git
+  repo: git://github.com/grofers/go-jmespath.git
 - name: github.com/juju/errors
   version: 6f54ff6318409d31ff16261533ce2c8381a4fd5d
 - name: github.com/kr/pretty
@@ -88,7 +88,7 @@ imports:
   version: 53818660ed4955e899c0bcafa97299a388bd7c8e
 - name: github.com/oleiade/reflections
   version: bfcc97ebb7fe8fa8ccfe23554901ead8794bae07
-  repo: git@github.com:grofers/reflections.git
+  repo: git://github.com/grofers/reflections.git
 - name: github.com/pelletier/go-buffruneio
   version: c37440a7cf42ac63b919c752ca73a85067e05992
   repo: https://github.com/pelletier/go-buffruneio
