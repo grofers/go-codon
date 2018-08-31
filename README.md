@@ -24,6 +24,13 @@ cd go-codon
 make install
 ```
 
+### With Docker
+
+If you are using Docker for your Golang development environment where you intend
+to use `go-codon`, you can also use our [Docker image]() as the base image for
+your project where you will find `codon` CLI installed and available in path for
+your use.
+
 ## Example
 This is what a workflow looks like (for an API to get posts and the comments for each post concurrently):
 ```yaml
