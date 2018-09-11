@@ -2,13 +2,13 @@ package: github.com/grofers/go-codon
 import:
 - package: github.com/go-openapi/swag
 - package: github.com/go-swagger/go-swagger
-  repo: git@github.com:grofers/go-swagger.git
+  repo: git://github.com/grofers/go-swagger.git
   subpackages:
   - generator
 - package: github.com/jmespath/go-jmespath
-  repo: git@github.com:grofers/go-jmespath.git
+  repo: git://github.com/grofers/go-jmespath.git
 - package: github.com/oleiade/reflections
-  repo: git@github.com:grofers/reflections.git
+  repo: git://github.com/grofers/reflections.git
 - package: github.com/spf13/cobra
 - package: github.com/spf13/viper
 - package: gopkg.in/yaml.v2
