@@ -30,4 +30,10 @@ itest:
 
 test: install installtestdependencies itest
 
+docker_build:
+	docker build -t docker-hub.grofer.io/consumer/go-codon .
+
+docker_push:
+	docker push docker-hub.grofer.io/consumer/go-codon
+
 .PHONY: installdependencies clean
