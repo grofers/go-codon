@@ -1,6 +1,3 @@
-if ! hash glide 2>/dev/null; then
-	curl https://glide.sh/get | sh
-fi
-glide install
+go mod download
 
-go get -u github.com/jteeuwen/go-bindata/...
+GO111MODULE=off go get -u github.com/jteeuwen/go-bindata/...

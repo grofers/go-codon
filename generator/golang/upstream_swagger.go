@@ -3,8 +3,8 @@ package golang
 import (
 	"fmt"
 	"log"
-	"strings"
 	"path/filepath"
+	"strings"
 
 	swagger_generator "github.com/go-swagger/go-swagger/generator"
 	shared "github.com/grofers/go-codon/shared"

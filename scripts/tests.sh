@@ -5,14 +5,14 @@ cd testing
 codon init
 cd ..
 
-rsync -a compliance/ testing/
+rsync -a _compliance/ testing/
 
 cd testing
 make generate
 # Patch clients with mock
 rm -rf clients
 cd ..
-rsync -a compliance/clients/ testing/clients/
+rsync -a _compliance/clients/ testing/clients/
 
 cd testing
 go test
