@@ -1,5 +1,5 @@
 # go-codon
-Generates Go server code from a combination of REST and Workflow DSLs.
+Generates Go Server Code from a combination of REST and Workflow DSLs.
 
 [![Build Status](https://travis-ci.org/grofers/go-codon.svg?branch=master)](https://travis-ci.org/grofers/go-codon)
 
